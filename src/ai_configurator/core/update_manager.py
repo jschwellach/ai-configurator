@@ -292,26 +292,20 @@ class UpdateManager(LoggerMixin):
     def _preserve_personal_configs(self) -> Dict[str, any]:
         """Preserve personal configurations before update."""
         preserved = {
-            "custom_mcp_servers": {},
+            "all_mcp_servers": {},  # Changed: preserve ALL MCP servers
             "custom_profiles": {},
             "personal_contexts": [],
             "custom_hooks": []
         }
         
-        # Preserve custom MCP servers (not in templates)
+        # Preserve ALL MCP servers (not just custom ones)
+        # This fixes the bug where personal MCP servers were being lost
         current_mcp = self.config_manager.load_mcp_config()
         if current_mcp:
-            available_groups = self.installer.get_available_mcp_groups()
-            template_servers = set()
-            
-            for group in available_groups:
-                servers = self.installer.load_mcp_group(group)
-                if servers:
-                    template_servers.update(servers.keys())
-            
+            # Store ALL current MCP servers to prevent data loss
             for server_name, config in current_mcp.mcp_servers.items():
-                if server_name not in template_servers:
-                    preserved["custom_mcp_servers"][server_name] = config
+                preserved["all_mcp_servers"][server_name] = config
+                self.logger.debug(f"Preserving MCP server: {server_name}")
         
         # Preserve custom profiles
         current_profiles = self.config_manager.list_profiles()
@@ -342,8 +336,19 @@ class UpdateManager(LoggerMixin):
     
     def _restore_personal_configs(self, preserved_data: Dict[str, any]) -> None:
         """Restore personal configurations after update."""
-        # Restore custom MCP servers
-        if preserved_data["custom_mcp_servers"]:
+        # Restore ALL MCP servers (fixes the preservation bug)
+        if preserved_data.get("all_mcp_servers"):
+            current_mcp = self.config_manager.load_mcp_config()
+            if current_mcp:
+                # Merge preserved servers with any new template servers
+                # This ensures we keep all existing servers while adding new ones
+                for server_name, config in preserved_data["all_mcp_servers"].items():
+                    current_mcp.mcp_servers[server_name] = config
+                    self.logger.debug(f"Restored MCP server: {server_name}")
+                self.config_manager.save_mcp_config(current_mcp)
+        
+        # Fallback for old preservation format (backward compatibility)
+        elif preserved_data.get("custom_mcp_servers"):
             current_mcp = self.config_manager.load_mcp_config()
             if current_mcp:
                 current_mcp.mcp_servers.update(preserved_data["custom_mcp_servers"])
@@ -362,15 +367,34 @@ class UpdateManager(LoggerMixin):
     
     def _perform_full_update(self) -> bool:
         """Perform a full configuration update."""
-        # Use installer to reinstall with force
-        install_config = InstallationConfig(
-            profile="default",  # Will be overridden by current active profile
-            mcp_servers=["core"],  # Will be expanded based on current config
-            backup_before_install=False,  # Already backed up
-            force=True
-        )
-        
-        return self.installer.install(install_config)
+        try:
+            # Get current active profile to maintain it
+            current_profile = self.config_manager.get_active_profile() or "default"
+            
+            # Update components individually to avoid destructive overwrite
+            success = True
+            
+            # Update MCP servers (merge with existing)
+            if not self._update_mcp_servers():
+                success = False
+                
+            # Update profiles (preserve existing)
+            if not self._update_profiles():
+                success = False
+                
+            # Update contexts (preserve personal ones)
+            if not self._update_contexts():
+                success = False
+                
+            # Update hooks (preserve custom ones)
+            if not self._update_hooks():
+                success = False
+            
+            return success
+            
+        except Exception as e:
+            self.logger.error(f"Full update failed: {e}")
+            return False
     
     def _perform_selective_update(self, components: List[str]) -> bool:
         """Perform selective update of specific components."""
@@ -395,12 +419,27 @@ class UpdateManager(LoggerMixin):
         return success
     
     def _update_mcp_servers(self) -> bool:
-        """Update MCP server configurations."""
+        """Update MCP server configurations by merging with existing."""
         try:
-            # Get current MCP groups (simplified approach)
-            mcp_groups = ["core"]  # Default, could be made smarter
-            mcp_config = self.installer.merge_mcp_configurations(mcp_groups)
-            return self.config_manager.save_mcp_config(mcp_config)
+            # Load current MCP configuration
+            current_mcp = self.config_manager.load_mcp_config()
+            if not current_mcp:
+                # If no current config, create new one with core servers
+                mcp_groups = ["core"]
+                mcp_config = self.installer.merge_mcp_configurations(mcp_groups)
+                return self.config_manager.save_mcp_config(mcp_config)
+            
+            # Get template servers from core group
+            core_servers = self.installer.load_mcp_group("core")
+            if core_servers:
+                # Merge template servers with existing ones
+                # Template servers will update existing ones, but won't remove custom ones
+                for server_name, server_config in core_servers.items():
+                    current_mcp.mcp_servers[server_name] = server_config
+                    self.logger.debug(f"Updated template MCP server: {server_name}")
+            
+            return self.config_manager.save_mcp_config(current_mcp)
+            
         except Exception as e:
             self.logger.error(f"Failed to update MCP servers: {e}")
             return False

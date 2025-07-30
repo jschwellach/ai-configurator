@@ -30,6 +30,7 @@ class ProfileContext(BaseModel):
     """Profile context configuration."""
     
     paths: List[str] = Field(default_factory=list, description="Context file paths")
+    hooks: Dict[str, Any] = Field(default_factory=dict, description="Profile-specific hooks")
 
 
 class GlobalContext(BaseModel):

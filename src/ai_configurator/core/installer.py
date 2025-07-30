@@ -207,9 +207,20 @@ class InstallationManager(LoggerMixin):
             
             # Install MCP configuration
             mcp_groups = config.mcp_servers or ["core"]
-            mcp_config = self.merge_mcp_configurations(mcp_groups)
+            new_mcp_config = self.merge_mcp_configurations(mcp_groups)
             
-            if not self.config_manager.save_mcp_config(mcp_config):
+            # If force=True, merge with existing MCP servers instead of overwriting
+            if config.force:
+                existing_mcp = self.config_manager.load_mcp_config()
+                if existing_mcp:
+                    # Preserve all existing servers and add/update template servers
+                    for server_name, server_config in new_mcp_config.mcp_servers.items():
+                        existing_mcp.mcp_servers[server_name] = server_config
+                        self.logger.debug(f"Added/updated template MCP server: {server_name}")
+                    new_mcp_config = existing_mcp
+                    self.logger.info(f"Merged with existing MCP configuration, preserving {len(existing_mcp.mcp_servers)} servers")
+            
+            if not self.config_manager.save_mcp_config(new_mcp_config):
                 self.logger.error("Failed to save MCP configuration")
                 return False
             
