@@ -1,0 +1,92 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "ai-configurator"
+version = "0.1.0"
+description = "Cross-platform configuration manager for Amazon Q CLI"
+readme = "README.md"
+requires-python = ">=3.8"
+license = "MIT"
+authors = [
+    { name = "AI Configurator Team" },
+]
+keywords = ["amazon-q", "cli", "configuration", "ai", "mcp"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Software Development",
+    "Topic :: System :: Installation/Setup",
+]
+
+dependencies = [
+    "click>=8.0.0",
+    "pydantic>=2.0.0",
+    "rich>=13.0.0",
+    "pyyaml>=6.0.0",
+    "packaging>=21.0.0",
+    "platformdirs>=3.0.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0.0",
+    "pytest-cov>=4.0.0",
+    "black>=23.0.0",
+    "isort>=5.0.0",
+    "flake8>=6.0.0",
+    "mypy>=1.0.0",
+    "pre-commit>=3.0.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/your-org/ai-configurator"
+Documentation = "https://ai-configurator.readthedocs.io"
+Repository = "https://github.com/your-org/ai-configurator.git"
+"Bug Tracker" = "https://github.com/your-org/ai-configurator/issues"
+
+[project.scripts]
+ai-config = "ai_configurator.cli:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/ai_configurator"]
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "/src",
+    "/configs",
+    "/contexts",
+    "/hooks",
+    "/templates",
+]
+
+[tool.black]
+line-length = 88
+target-version = ['py38']
+include = '\.pyi?$'
+
+[tool.isort]
+profile = "black"
+multi_line_output = 3
+
+[tool.mypy]
+python_version = "3.8"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = "--cov=ai_configurator --cov-report=term-missing"
