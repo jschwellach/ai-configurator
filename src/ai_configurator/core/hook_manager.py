@@ -3,35 +3,63 @@
 import json
 import subprocess
 import sys
+import os
+import time
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 import yaml
 
 from ..utils.logging import LoggerMixin
-from .config_manager import ConfigurationManager
+# Removed circular import - ConfigurationManager will be passed as parameter
 from .platform import PlatformManager
+from .models import (
+    HookConfig, HookType, HookTrigger, ConditionConfig, 
+    ScriptConfig, ContextConfig, ConfigurationError, ValidationReport
+)
+from .yaml_loader import YamlConfigLoader
+from .markdown_processor import MarkdownProcessor
+# Removed directory_manager import to avoid circular dependencies
 
 
 class HookManager(LoggerMixin):
-    """Manages hook execution and lifecycle."""
+    """Enhanced hook management system supporting YAML hook definitions."""
     
     def __init__(
         self,
+        config_dir: Path,
+        yaml_loader: YamlConfigLoader,
         platform_manager: Optional[PlatformManager] = None,
-        config_manager: Optional[ConfigurationManager] = None
+        markdown_processor: Optional[MarkdownProcessor] = None
     ):
         self.platform = platform_manager or PlatformManager()
-        self.config_manager = config_manager or ConfigurationManager(self.platform)
-        self.hooks_dir = self.config_manager.config_dir / "hooks"
+        self.config_dir = config_dir
+        self.yaml_loader = yaml_loader
+        self.markdown_processor = markdown_processor or MarkdownProcessor()
+        
+        # Initialize hooks directory
+        self.hooks_dir = self.config_dir / "hooks"
+        self.hooks_dir.mkdir(parents=True, exist_ok=True)
+        # hooks_dir already set above
+        
+        # Cache for loaded hook configurations
+        self._hook_cache: Dict[str, HookConfig] = {}
+        self._cache_timestamps: Dict[str, float] = {}
+        
+        # Registry of hooks by trigger type
+        self._hooks_by_trigger: Dict[HookTrigger, List[HookConfig]] = {
+            trigger: [] for trigger in HookTrigger
+        }
     
-    def list_available_hooks(self) -> Dict[str, List[str]]:
-        """List all available hooks organized by type."""
+    def discover_hooks(self) -> Dict[str, List[str]]:
+        """Discover all available hooks organized by type."""
         hooks = {
+            "yaml": [],
             "scripts": [],
             "python": [],
             "shell": [],
-            "config": []
+            "markdown": [],
+            "legacy": []
         }
         
         if not self.hooks_dir.exists():
@@ -39,84 +67,203 @@ class HookManager(LoggerMixin):
         
         for hook_file in self.hooks_dir.iterdir():
             if hook_file.is_file():
-                if hook_file.suffix == ".py":
-                    hooks["python"].append(hook_file.name)
-                    hooks["scripts"].append(hook_file.name)
+                if hook_file.suffix in [".yaml", ".yml"]:
+                    hooks["yaml"].append(hook_file.stem)
+                elif hook_file.suffix == ".py":
+                    hooks["python"].append(hook_file.stem)
+                    hooks["scripts"].append(hook_file.stem)
                 elif hook_file.suffix in [".sh", ".bash"]:
-                    hooks["shell"].append(hook_file.name)
-                    hooks["scripts"].append(hook_file.name)
-                elif hook_file.suffix in [".yaml", ".yml", ".json"]:
-                    hooks["config"].append(hook_file.name)
+                    hooks["shell"].append(hook_file.stem)
+                    hooks["scripts"].append(hook_file.stem)
+                elif hook_file.suffix == ".md":
+                    hooks["markdown"].append(hook_file.stem)
+                elif hook_file.suffix == ".json":
+                    hooks["legacy"].append(hook_file.stem)
         
         return hooks
     
-    def load_hook_config(self) -> Optional[Dict[str, Any]]:
-        """Load hook configuration from config.yaml."""
-        config_file = self.hooks_dir / "config.yaml"
+    def validate_hook_name(self, hook_name: str) -> tuple[bool, str]:
+        """
+        Validate a hook name against naming conventions.
         
-        if not config_file.exists():
-            self.logger.warning("Hook configuration file not found")
-            return None
-        
-        try:
-            with open(config_file, 'r', encoding='utf-8') as f:
-                return yaml.safe_load(f)
-        except Exception as e:
-            self.logger.error(f"Failed to load hook configuration: {e}")
-            return None
+        Args:
+            hook_name: Name to validate
+            
+        Returns:
+            Tuple of (is_valid, error_message)
+        """
+        # Simple naming validation
+        if not hook_name or not hook_name.replace('-', '').replace('_', '').isalnum():
+            return False, "Hook name must contain only alphanumeric characters, hyphens, and underscores"
+        return True, ""
     
-    def execute_hook(
-        self, 
-        hook_name: str, 
-        args: Optional[List[str]] = None,
-        env_vars: Optional[Dict[str, str]] = None,
-        timeout: int = 30
-    ) -> Tuple[bool, str, str]:
-        """Execute a hook script and return success status, stdout, stderr."""
-        hook_file = self.hooks_dir / hook_name
+    def load_hook_config(self, hook_name: str) -> Optional[HookConfig]:
+        """Load hook configuration from YAML file with caching."""
+        hook_file = self.hooks_dir / f"{hook_name}.yaml"
         
         if not hook_file.exists():
-            return False, "", f"Hook file not found: {hook_name}"
+            # Try .yml extension
+            hook_file = self.hooks_dir / f"{hook_name}.yml"
+            if not hook_file.exists():
+                self.logger.warning(f"Hook configuration file not found: {hook_name}")
+                return None
         
-        # Prepare command
-        if hook_file.suffix == ".py":
-            cmd = [sys.executable, str(hook_file)]
-        elif hook_file.suffix in [".sh", ".bash"]:
-            if self.platform.is_windows():
-                # On Windows, try to use bash if available, otherwise skip
-                bash_path = self.platform._find_bash()
-                if bash_path:
-                    cmd = [bash_path, str(hook_file)]
-                else:
-                    return False, "", "Bash not available on Windows"
-            else:
-                cmd = ["bash", str(hook_file)]
-        else:
-            return False, "", f"Unsupported hook file type: {hook_file.suffix}"
-        
-        # Add arguments
-        if args:
-            cmd.extend(args)
-        
-        # Prepare environment
-        env = dict(os.environ) if 'os' in globals() else {}
-        if env_vars:
-            env.update(env_vars)
-        
-        # Add Amazon Q config directory to environment
-        env["AMAZONQ_CONFIG_DIR"] = str(self.config_manager.config_dir)
-        env["AI_CONFIGURATOR_HOOKS_DIR"] = str(self.hooks_dir)
+        # Check cache
+        file_mtime = hook_file.stat().st_mtime
+        if (hook_name in self._hook_cache and 
+            hook_name in self._cache_timestamps and
+            self._cache_timestamps[hook_name] >= file_mtime):
+            return self._hook_cache[hook_name]
         
         try:
-            self.logger.debug(f"Executing hook: {' '.join(cmd)}")
+            hook_config = self.yaml_loader.load_hook_config(hook_file)
+            if hook_config:
+                # Cache the configuration
+                self._hook_cache[hook_name] = hook_config
+                self._cache_timestamps[hook_name] = file_mtime
+                self.logger.debug(f"Loaded hook configuration: {hook_name}")
+                return hook_config
+        except Exception as e:
+            self.logger.error(f"Failed to load hook configuration '{hook_name}': {e}")
+        
+        return None
+    
+    def load_hooks_by_trigger(self, trigger: HookTrigger) -> List[HookConfig]:
+        """Load all hooks for a specific trigger, sorted by execution order."""
+        if trigger in self._hooks_by_trigger and self._hooks_by_trigger[trigger]:
+            return self._hooks_by_trigger[trigger]
+        
+        hooks = []
+        discovered = self.discover_hooks()
+        
+        for hook_name in discovered["yaml"]:
+            hook_config = self.load_hook_config(hook_name)
+            if hook_config and hook_config.trigger == trigger and hook_config.enabled:
+                # Check conditions
+                if self._check_hook_conditions(hook_config):
+                    hooks.append(hook_config)
+        
+        # Sort hooks by name to ensure consistent execution order
+        hooks.sort(key=lambda h: h.name)
+        
+        # Cache the result
+        self._hooks_by_trigger[trigger] = hooks
+        
+        return hooks
+    
+    def _check_hook_conditions(self, hook_config: HookConfig) -> bool:
+        """Check if hook conditions are met for execution."""
+        if not hook_config.conditions:
+            return True
+        
+        for condition in hook_config.conditions:
+            # Check platform condition
+            if condition.platform:
+                current_platform = self.platform.get_platform_name().lower()
+                if current_platform not in condition.platform:
+                    return False
+            
+            # Check environment variables
+            if condition.environment:
+                for env_var, expected_value in condition.environment.items():
+                    if os.environ.get(env_var) != expected_value:
+                        return False
+        
+        return True
+    
+    def execute_hook(self, hook_config: HookConfig, context: Optional[Dict[str, Any]] = None) -> Tuple[bool, str, str]:
+        """Execute a hook based on its configuration."""
+        try:
+            if hook_config.type == HookType.CONTEXT:
+                return self._execute_context_hook(hook_config, context)
+            elif hook_config.type == HookType.SCRIPT:
+                return self._execute_script_hook(hook_config, context)
+            elif hook_config.type == HookType.HYBRID:
+                return self._execute_hybrid_hook(hook_config, context)
+            else:
+                return False, "", f"Unsupported hook type: {hook_config.type}"
+        except Exception as e:
+            self.logger.error(f"Failed to execute hook '{hook_config.name}': {e}")
+            return False, "", str(e)
+    
+    def _execute_context_hook(self, hook_config: HookConfig, context: Optional[Dict[str, Any]] = None) -> Tuple[bool, str, str]:
+        """Execute a context-type hook."""
+        if not hook_config.context or not hook_config.context.sources:
+            return False, "", "Context hook has no context sources defined"
+        
+        try:
+            context_content = []
+            
+            for source_path in hook_config.context.sources:
+                # Resolve relative paths
+                if not Path(source_path).is_absolute():
+                    source_file = self.config_manager.config_dir / source_path
+                else:
+                    source_file = Path(source_path)
+                
+                if source_file.exists():
+                    if source_file.suffix == ".md":
+                        # Load Markdown with frontmatter
+                        context_file = self.markdown_processor.load_context_file(source_file)
+                        context_content.append(context_file.content)
+                    else:
+                        # Load plain text
+                        with open(source_file, 'r', encoding='utf-8') as f:
+                            context_content.append(f.read())
+                else:
+                    self.logger.warning(f"Context source not found: {source_path}")
+            
+            combined_content = "\n\n".join(context_content)
+            self.logger.info(f"Context hook '{hook_config.name}' loaded {len(context_content)} sources")
+            
+            return True, combined_content, ""
+            
+        except Exception as e:
+            return False, "", f"Failed to load context: {e}"
+    
+    def _execute_script_hook(self, hook_config: HookConfig, context: Optional[Dict[str, Any]] = None) -> Tuple[bool, str, str]:
+        """Execute a script-type hook."""
+        if not hook_config.script:
+            return False, "", "Script hook has no script configuration"
+        
+        script_config = hook_config.script
+        
+        # Prepare command
+        cmd = [script_config.command]
+        if script_config.args:
+            cmd.extend(script_config.args)
+        
+        # Prepare environment
+        env = dict(os.environ)
+        env.update(script_config.env)
+        
+        # Add standard environment variables
+        env["AMAZONQ_CONFIG_DIR"] = str(self.config_manager.config_dir)
+        env["AI_CONFIGURATOR_HOOKS_DIR"] = str(self.hooks_dir)
+        env["HOOK_NAME"] = hook_config.name
+        
+        # Add context as environment variable if provided
+        if context:
+            env["HOOK_CONTEXT"] = json.dumps(context)
+        
+        # Determine working directory
+        working_dir = self.hooks_dir
+        if script_config.working_dir:
+            if Path(script_config.working_dir).is_absolute():
+                working_dir = Path(script_config.working_dir)
+            else:
+                working_dir = self.config_manager.config_dir / script_config.working_dir
+        
+        try:
+            self.logger.debug(f"Executing script hook: {' '.join(cmd)}")
             
             result = subprocess.run(
                 cmd,
                 capture_output=True,
                 text=True,
-                timeout=timeout,
+                timeout=script_config.timeout,
                 env=env,
-                cwd=self.hooks_dir
+                cwd=working_dir
             )
             
             success = result.returncode == 0
@@ -124,275 +271,409 @@ class HookManager(LoggerMixin):
             stderr = result.stderr or ""
             
             if success:
-                self.logger.info(f"Hook '{hook_name}' executed successfully")
+                self.logger.info(f"Script hook '{hook_config.name}' executed successfully")
             else:
-                self.logger.warning(f"Hook '{hook_name}' failed with return code {result.returncode}")
+                self.logger.warning(f"Script hook '{hook_config.name}' failed with return code {result.returncode}")
             
             return success, stdout, stderr
             
         except subprocess.TimeoutExpired:
-            self.logger.error(f"Hook '{hook_name}' timed out after {timeout} seconds")
-            return False, "", f"Hook execution timed out after {timeout} seconds"
+            self.logger.error(f"Script hook '{hook_config.name}' timed out after {script_config.timeout} seconds")
+            return False, "", f"Hook execution timed out after {script_config.timeout} seconds"
         except Exception as e:
-            self.logger.error(f"Failed to execute hook '{hook_name}': {e}")
             return False, "", str(e)
     
-    def execute_context_hook(self, context_name: str) -> Tuple[bool, str]:
-        """Execute context loading hook and return success status and content."""
-        hook_config = self.load_hook_config()
-        if not hook_config:
-            return False, "Hook configuration not available"
+    def _execute_hybrid_hook(self, hook_config: HookConfig, context: Optional[Dict[str, Any]] = None) -> Tuple[bool, str, str]:
+        """Execute a hybrid-type hook (both context and script)."""
+        # First execute context part
+        context_success, context_content, context_error = self._execute_context_hook(hook_config, context)
         
-        # Check if context is defined in hook config
-        contexts = hook_config.get("contexts", {})
-        if context_name not in contexts:
-            return False, f"Context '{context_name}' not defined in hook configuration"
+        if not context_success:
+            return False, "", f"Context execution failed: {context_error}"
         
-        # Execute context loader hook
-        success, stdout, stderr = self.execute_hook(
-            "context_loader.py",
-            args=[context_name],
-            timeout=60
-        )
+        # Then execute script part with context as additional input
+        enhanced_context = context or {}
+        enhanced_context["loaded_context"] = context_content
         
-        if success:
-            return True, stdout
-        else:
-            error_msg = stderr or "Unknown error"
-            return False, f"Context loading failed: {error_msg}"
+        script_success, script_output, script_error = self._execute_script_hook(hook_config, enhanced_context)
+        
+        # Combine results
+        combined_output = f"Context Content:\n{context_content}\n\nScript Output:\n{script_output}"
+        
+        return script_success, combined_output, script_error
     
-    def validate_hooks(self) -> Dict[str, Any]:
-        """Validate all hooks and return detailed status."""
-        validation_result = {
-            "valid_hooks": [],
-            "invalid_hooks": [],
-            "executable_hooks": [],
-            "config_issues": [],
-            "recommendations": []
+    def execute_hooks_for_trigger(self, trigger: HookTrigger, context: Optional[Dict[str, Any]] = None) -> List[Tuple[str, bool, str, str]]:
+        """Execute all hooks for a specific trigger in order."""
+        hooks = self.load_hooks_by_trigger(trigger)
+        results = []
+        
+        self.logger.info(f"Executing {len(hooks)} hooks for trigger: {trigger.value}")
+        
+        for hook_config in hooks:
+            try:
+                success, stdout, stderr = self.execute_hook(hook_config, context)
+                results.append((hook_config.name, success, stdout, stderr))
+                
+                if not success:
+                    self.logger.error(f"Hook '{hook_config.name}' failed: {stderr}")
+                    # Continue with other hooks as per requirement 2.4
+                    
+            except Exception as e:
+                self.logger.error(f"Exception executing hook '{hook_config.name}': {e}")
+                results.append((hook_config.name, False, "", str(e)))
+                # Continue with other hooks
+        
+        return results
+    
+    def execute_hook_by_name(self, hook_name: str, context: Optional[Dict[str, Any]] = None) -> Tuple[bool, str, str]:
+        """Execute a specific hook by name."""
+        hook_config = self.load_hook_config(hook_name)
+        if not hook_config:
+            return False, "", f"Hook configuration not found: {hook_name}"
+        
+        if not hook_config.enabled:
+            return False, "", f"Hook is disabled: {hook_name}"
+        
+        if not self._check_hook_conditions(hook_config):
+            return False, "", f"Hook conditions not met: {hook_name}"
+        
+        return self.execute_hook(hook_config, context)
+    
+    def validate_hooks(self) -> ValidationReport:
+        """Validate all hooks and return detailed validation report."""
+        errors = []
+        warnings = []
+        info = []
+        files_checked = []
+        
+        discovered = self.discover_hooks()
+        
+        # Validate YAML hook configurations
+        for hook_name in discovered["yaml"]:
+            hook_file = self.hooks_dir / f"{hook_name}.yaml"
+            if not hook_file.exists():
+                hook_file = self.hooks_dir / f"{hook_name}.yml"
+            
+            files_checked.append(str(hook_file))
+            
+            try:
+                hook_config = self.load_hook_config(hook_name)
+                if hook_config:
+                    # Validate hook configuration
+                    validation_errors = self._validate_hook_config(hook_config, hook_file)
+                    errors.extend(validation_errors)
+                    
+                    info.append(ConfigurationError(
+                        file_path=str(hook_file),
+                        error_type="info",
+                        message=f"Hook '{hook_name}' loaded successfully",
+                        severity="info"
+                    ))
+                else:
+                    errors.append(ConfigurationError(
+                        file_path=str(hook_file),
+                        error_type="load_error",
+                        message=f"Failed to load hook configuration",
+                        severity="error"
+                    ))
+            except Exception as e:
+                errors.append(ConfigurationError(
+                    file_path=str(hook_file),
+                    error_type="exception",
+                    message=f"Exception loading hook: {e}",
+                    severity="error"
+                ))
+        
+        # Check for orphaned Markdown files
+        for md_name in discovered["markdown"]:
+            yaml_exists = (md_name in discovered["yaml"] or 
+                          any(hook_config and hook_config.context and 
+                              any(f"{md_name}.md" in source for source in hook_config.context.sources)
+                              for hook_config in self._hook_cache.values()))
+            
+            if not yaml_exists:
+                warnings.append(ConfigurationError(
+                    file_path=str(self.hooks_dir / f"{md_name}.md"),
+                    error_type="orphaned_file",
+                    message=f"Markdown file has no corresponding YAML hook configuration",
+                    severity="warning"
+                ))
+        
+        is_valid = len(errors) == 0
+        summary = {
+            "total_hooks": len(discovered["yaml"]),
+            "valid_hooks": len(discovered["yaml"]) - len([e for e in errors if e.error_type != "info"]),
+            "errors": len(errors),
+            "warnings": len(warnings),
+            "info": len(info)
         }
         
-        hooks = self.list_available_hooks()
-        
-        # Validate script hooks
-        for script in hooks["scripts"]:
-            hook_file = self.hooks_dir / script
-            
-            # Check if file exists and is readable
-            if not hook_file.exists():
-                validation_result["invalid_hooks"].append({
-                    "hook": script,
-                    "issue": "File not found"
-                })
-                continue
-            
-            if not hook_file.is_file():
-                validation_result["invalid_hooks"].append({
-                    "hook": script,
-                    "issue": "Not a regular file"
-                })
-                continue
-            
-            # Check if file is executable (on Unix systems)
-            if not self.platform.is_windows():
-                if not hook_file.stat().st_mode & 0o111:
-                    validation_result["invalid_hooks"].append({
-                        "hook": script,
-                        "issue": "File is not executable"
-                    })
-                    continue
-            
-            # Basic syntax validation for Python files
-            if hook_file.suffix == ".py":
-                try:
-                    with open(hook_file, 'r', encoding='utf-8') as f:
-                        content = f.read()
-                    
-                    # Try to compile the Python code
-                    compile(content, str(hook_file), 'exec')
-                    validation_result["valid_hooks"].append(script)
-                    validation_result["executable_hooks"].append(script)
-                    
-                except SyntaxError as e:
-                    validation_result["invalid_hooks"].append({
-                        "hook": script,
-                        "issue": f"Python syntax error: {e}"
-                    })
-                except Exception as e:
-                    validation_result["invalid_hooks"].append({
-                        "hook": script,
-                        "issue": f"Failed to validate: {e}"
-                    })
-            else:
-                # For shell scripts, just check if they're readable
-                validation_result["valid_hooks"].append(script)
-                validation_result["executable_hooks"].append(script)
-        
-        # Validate hook configuration
-        hook_config = self.load_hook_config()
-        if hook_config:
-            # Check if context loader exists for defined contexts
-            contexts = hook_config.get("contexts", {})
-            if contexts and "context_loader.py" not in hooks["python"]:
-                validation_result["config_issues"].append(
-                    "Contexts defined but context_loader.py not found"
-                )
-            
-            # Check if defined context files exist
-            for context_name, files in contexts.items():
-                for file_path in files:
-                    full_path = self.config_manager.config_dir / file_path
-                    if not full_path.exists():
-                        validation_result["config_issues"].append(
-                            f"Context file not found for '{context_name}': {file_path}"
-                        )
-        else:
-            validation_result["config_issues"].append("Hook configuration file not found")
-        
-        # Generate recommendations
-        if validation_result["invalid_hooks"]:
-            validation_result["recommendations"].append(
-                f"Fix {len(validation_result['invalid_hooks'])} invalid hooks"
-            )
-        
-        if validation_result["config_issues"]:
-            validation_result["recommendations"].append(
-                "Resolve hook configuration issues"
-            )
-        
-        if not validation_result["executable_hooks"]:
-            validation_result["recommendations"].append(
-                "No executable hooks found - consider adding automation scripts"
-            )
-        
-        return validation_result
+        return ValidationReport(
+            is_valid=is_valid,
+            errors=errors,
+            warnings=warnings,
+            info=info,
+            files_checked=files_checked,
+            summary=summary
+        )
     
-    def create_hook_template(self, hook_name: str, hook_type: str = "python") -> bool:
-        """Create a new hook from template."""
-        if hook_type == "python":
-            template_content = '''#!/usr/bin/env python3
-"""
-{hook_name} - Amazon Q CLI Hook
-
-This hook is executed by AI Configurator.
-Environment variables available:
-- AMAZONQ_CONFIG_DIR: Path to Amazon Q configuration directory
-- AI_CONFIGURATOR_HOOKS_DIR: Path to hooks directory
-"""
-
-import os
-import sys
-from pathlib import Path
-
-def main():
-    """Main hook function."""
-    # Get environment variables
-    config_dir = Path(os.environ.get("AMAZONQ_CONFIG_DIR", ""))
-    hooks_dir = Path(os.environ.get("AI_CONFIGURATOR_HOOKS_DIR", ""))
-    
-    print(f"Hook '{hook_name}' executed successfully!")
-    print(f"Config directory: {{config_dir}}")
-    print(f"Hooks directory: {{hooks_dir}}")
-    
-    # Add your hook logic here
-    
-    return 0
-
-if __name__ == "__main__":
-    sys.exit(main())
-'''.format(hook_name=hook_name)
-            
-            hook_file = self.hooks_dir / f"{hook_name}.py"
-            
-        elif hook_type == "shell":
-            template_content = '''#!/bin/bash
-#
-# {hook_name} - Amazon Q CLI Hook
-#
-# This hook is executed by AI Configurator.
-# Environment variables available:
-# - AMAZONQ_CONFIG_DIR: Path to Amazon Q configuration directory
-# - AI_CONFIGURATOR_HOOKS_DIR: Path to hooks directory
-#
-
-set -e
-
-echo "Hook '{hook_name}' executed successfully!"
-echo "Config directory: $AMAZONQ_CONFIG_DIR"
-echo "Hooks directory: $AI_CONFIGURATOR_HOOKS_DIR"
-
-# Add your hook logic here
-
-exit 0
-'''.format(hook_name=hook_name)
-            
-            hook_file = self.hooks_dir / f"{hook_name}.sh"
-        else:
-            self.logger.error(f"Unsupported hook type: {hook_type}")
-            return False
+    def _validate_hook_config(self, hook_config: HookConfig, hook_file: Path) -> List[ConfigurationError]:
+        """Validate a single hook configuration."""
+        errors = []
         
+        # Validate context sources exist
+        if hook_config.context and hook_config.context.sources:
+            for source_path in hook_config.context.sources:
+                if not Path(source_path).is_absolute():
+                    source_file = self.config_manager.config_dir / source_path
+                else:
+                    source_file = Path(source_path)
+                
+                if not source_file.exists():
+                    errors.append(ConfigurationError(
+                        file_path=str(hook_file),
+                        error_type="missing_file",
+                        message=f"Context source file not found: {source_path}",
+                        severity="error"
+                    ))
+        
+        # Validate script configuration
+        if hook_config.script:
+            # Check if command exists (basic check)
+            try:
+                import shutil
+                if not shutil.which(hook_config.script.command):
+                    errors.append(ConfigurationError(
+                        file_path=str(hook_file),
+                        error_type="missing_command",
+                        message=f"Script command not found: {hook_config.script.command}",
+                        severity="warning"
+                    ))
+            except Exception:
+                pass  # Skip if we can't check
+        
+        # Validate hook type consistency
+        if hook_config.type == HookType.CONTEXT and not hook_config.context:
+            errors.append(ConfigurationError(
+                file_path=str(hook_file),
+                error_type="config_mismatch",
+                message="Context hook type specified but no context configuration provided",
+                severity="error"
+            ))
+        
+        if hook_config.type == HookType.SCRIPT and not hook_config.script:
+            errors.append(ConfigurationError(
+                file_path=str(hook_file),
+                error_type="config_mismatch",
+                message="Script hook type specified but no script configuration provided",
+                severity="error"
+            ))
+        
+        return errors
+    
+    def create_hook_template(self, hook_name: str, hook_type: HookType = HookType.CONTEXT, 
+                           trigger: HookTrigger = HookTrigger.ON_SESSION_START) -> bool:
+        """Create a new YAML hook template."""
         try:
             # Ensure hooks directory exists
             self.hooks_dir.mkdir(parents=True, exist_ok=True)
             
-            # Write hook file
-            with open(hook_file, 'w', encoding='utf-8') as f:
-                f.write(template_content)
+            # Create YAML configuration
+            yaml_content = self._generate_hook_template(hook_name, hook_type, trigger)
+            yaml_file = self.hooks_dir / f"{hook_name}.yaml"
             
-            # Make executable on Unix systems
-            if not self.platform.is_windows():
-                hook_file.chmod(0o755)
+            with open(yaml_file, 'w', encoding='utf-8') as f:
+                f.write(yaml_content)
             
-            self.logger.info(f"Created hook template: {hook_file}")
+            # Create companion Markdown file if it's a context hook
+            if hook_type in [HookType.CONTEXT, HookType.HYBRID]:
+                md_content = self._generate_markdown_template(hook_name)
+                md_file = self.hooks_dir / f"{hook_name}.md"
+                
+                with open(md_file, 'w', encoding='utf-8') as f:
+                    f.write(md_content)
+            
+            self.logger.info(f"Created hook template: {hook_name}")
             return True
             
         except Exception as e:
             self.logger.error(f"Failed to create hook template: {e}")
             return False
     
+    def _generate_hook_template(self, hook_name: str, hook_type: HookType, trigger: HookTrigger) -> str:
+        """Generate YAML hook template content."""
+        template = f"""# {hook_name} Hook Configuration
+name: "{hook_name}"
+description: "Auto-generated hook template"
+version: "1.0"
+type: "{hook_type.value}"
+trigger: "{trigger.value}"
+timeout: 30
+enabled: true
+
+"""
+        
+        if hook_type in [HookType.CONTEXT, HookType.HYBRID]:
+            template += f"""context:
+  sources:
+    - "hooks/{hook_name}.md"
+  tags: []
+  categories: []
+  priority: 0
+
+"""
+        
+        if hook_type in [HookType.SCRIPT, HookType.HYBRID]:
+            template += f"""script:
+  command: "python"
+  args: ["scripts/{hook_name}.py"]
+  env: {{}}
+  working_dir: "."
+  timeout: 30
+
+"""
+        
+        template += """conditions: []
+
+metadata:
+  created_by: "ai-configurator"
+  template_version: "1.0"
+"""
+        
+        return template
+    
+    def _generate_markdown_template(self, hook_name: str) -> str:
+        """Generate Markdown template content."""
+        return f"""---
+title: "{hook_name} Hook Context"
+tags: ["hook", "context"]
+categories: ["automation"]
+priority: 0
+---
+
+# {hook_name} Hook Context
+
+This file provides context for the {hook_name} hook.
+
+## Purpose
+
+Describe what this hook does and when it should be executed.
+
+## Context Information
+
+Add relevant context information that will be provided to the AI system when this hook is executed.
+
+## Examples
+
+Provide examples of how this hook should behave or what output is expected.
+"""
+    
     def test_hook(self, hook_name: str) -> Dict[str, Any]:
         """Test a hook and return detailed results."""
         test_result = {
             "hook": hook_name,
             "exists": False,
-            "executable": False,
+            "valid_config": False,
+            "conditions_met": False,
             "execution_time": 0,
             "success": False,
             "stdout": "",
             "stderr": "",
-            "error": None
+            "error": None,
+            "hook_type": None
         }
         
-        hook_file = self.hooks_dir / hook_name
-        test_result["exists"] = hook_file.exists()
+        # Check if hook configuration exists
+        hook_config = self.load_hook_config(hook_name)
+        test_result["exists"] = hook_config is not None
         
         if not test_result["exists"]:
-            test_result["error"] = "Hook file not found"
+            test_result["error"] = "Hook configuration not found"
             return test_result
         
-        # Check if executable
-        if self.platform.is_windows() or hook_file.stat().st_mode & 0o111:
-            test_result["executable"] = True
+        test_result["valid_config"] = True
+        test_result["hook_type"] = hook_config.type.value
         
-        if not test_result["executable"]:
-            test_result["error"] = "Hook file is not executable"
+        # Check conditions
+        test_result["conditions_met"] = self._check_hook_conditions(hook_config)
+        
+        if not test_result["conditions_met"]:
+            test_result["error"] = "Hook conditions not met"
             return test_result
         
-        # Execute hook with test arguments
-        import time
+        # Execute hook
         start_time = time.time()
         
-        success, stdout, stderr = self.execute_hook(
-            hook_name,
-            args=["--test"] if hook_name.endswith(".py") else [],
-            timeout=10
-        )
+        success, stdout, stderr = self.execute_hook(hook_config, {"test_mode": True})
         
         test_result["execution_time"] = round(time.time() - start_time, 3)
         test_result["success"] = success
         test_result["stdout"] = stdout
         test_result["stderr"] = stderr
         
-        if not success and not test_result["stderr"]:
+        if not success and not stderr:
             test_result["error"] = "Hook execution failed"
         
         return test_result
+    
+    def reload_hooks(self) -> None:
+        """Reload all hook configurations, clearing cache."""
+        self._hook_cache.clear()
+        self._cache_timestamps.clear()
+        self._hooks_by_trigger = {trigger: [] for trigger in HookTrigger}
+        self.logger.info("Hook configurations reloaded")
+    
+    def get_hook_info(self, hook_name: str) -> Optional[Dict[str, Any]]:
+        """Get detailed information about a hook."""
+        hook_config = self.load_hook_config(hook_name)
+        if not hook_config:
+            return None
+        
+        return {
+            "name": hook_config.name,
+            "description": hook_config.description,
+            "version": hook_config.version,
+            "type": hook_config.type.value,
+            "trigger": hook_config.trigger.value,
+            "enabled": hook_config.enabled,
+            "timeout": hook_config.timeout,
+            "has_context": hook_config.context is not None,
+            "has_script": hook_config.script is not None,
+            "conditions": len(hook_config.conditions),
+            "context_sources": len(hook_config.context.sources) if hook_config.context else 0,
+            "metadata": hook_config.metadata
+        }
+    
+    def list_hooks_by_trigger(self) -> Dict[str, List[str]]:
+        """List all hooks organized by trigger type."""
+        hooks_by_trigger = {}
+        discovered = self.discover_hooks()
+        
+        for hook_name in discovered["yaml"]:
+            hook_config = self.load_hook_config(hook_name)
+            if hook_config and hook_config.enabled:
+                trigger_name = hook_config.trigger.value
+                if trigger_name not in hooks_by_trigger:
+                    hooks_by_trigger[trigger_name] = []
+                hooks_by_trigger[trigger_name].append(hook_name)
+        
+        return hooks_by_trigger
+    
+    # Legacy compatibility methods
+    def list_available_hooks(self) -> Dict[str, List[str]]:
+        """Legacy method for backward compatibility."""
+        return self.discover_hooks()
+    
+    def load_hook_config_legacy(self) -> Optional[Dict[str, Any]]:
+        """Legacy method for loading old-style hook configuration."""
+        config_file = self.hooks_dir / "config.yaml"
+        
+        if not config_file.exists():
+            return None
+        
+        try:
+            with open(config_file, 'r', encoding='utf-8') as f:
+                return yaml.safe_load(f)
+        except Exception as e:
+            self.logger.error(f"Failed to load legacy hook configuration: {e}")
+            return None

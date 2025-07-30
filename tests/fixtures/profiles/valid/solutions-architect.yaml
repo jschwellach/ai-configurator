@@ -1,0 +1,34 @@
+name: "solutions-architect"
+description: "Solutions architect profile with AWS focus"
+version: "2.0"
+
+contexts:
+  - "contexts/aws-best-practices.md"
+  - "contexts/project-delivery.md"
+  - "contexts/client-communication.md"
+
+hooks:
+  on_session_start:
+    - name: "aws-setup"
+      enabled: true
+      timeout: 45
+    - name: "project-context"
+      enabled: true
+  per_user_message:
+    - name: "aws-advisor"
+      enabled: true
+      timeout: 20
+
+mcp_servers:
+  - "core"
+  - "aws-docs"
+  - "specialized"
+
+settings:
+  auto_backup: true
+  validation_level: "strict"
+  aws_region: "us-east-1"
+
+metadata:
+  author: "AWS Team"
+  version_history: ["1.0", "1.5", "2.0"]

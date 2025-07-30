@@ -1,0 +1,7 @@
+name: "missing-trigger"
+description: "Hook missing required trigger field"
+type: "context"
+# Missing trigger field
+context:
+  sources:
+    - "contexts/test.md"

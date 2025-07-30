@@ -14,9 +14,19 @@ from .models import (
     ProfileConfig,
     ProfileContext,
     ValidationResult,
+    EnhancedProfileConfig,
+    HookConfig,
+    ContextFile,
+    ConfigurationError,
+    ValidationReport,
 )
 from .platform import PlatformManager
 from .update_manager import UpdateManager
+from .yaml_loader import YamlConfigLoader
+from .file_watcher import FileWatcher
+from .profile_manager import ProfileManager
+from .config_merger import ConfigurationMerger
+from .markdown_processor import MarkdownProcessor
 
 __all__ = [
     "ConfigurationManager",
@@ -25,6 +35,11 @@ __all__ = [
     "InstallationManager",
     "PlatformManager",
     "UpdateManager",
+    "YamlConfigLoader",
+    "FileWatcher",
+    "ProfileManager",
+    "ConfigurationMerger",
+    "MarkdownProcessor",
     "BackupMetadata",
     "ConfigurationState",
     "GlobalContext",
@@ -34,4 +49,9 @@ __all__ = [
     "ProfileConfig",
     "ProfileContext",
     "ValidationResult",
+    "EnhancedProfileConfig",
+    "HookConfig",
+    "ContextFile",
+    "ConfigurationError",
+    "ValidationReport",
 ]

@@ -16,6 +16,47 @@ Simplify the setup and sharing of Amazon Q CLI configurations across teams and e
 - **Context Sharing**: Share knowledge bases and contexts across teams
 - **Hook System**: Automate workflows with custom hooks
 
+## 📦 Installation
+
+### Using uvx (Recommended)
+
+```bash
+# Install uv/uvx if you haven't already
+pip install uv
+
+# Install AI Configurator from source
+uvx install --from . ai-configurator
+
+# Or run directly without installing
+uvx run --from . uvx_install.py --help
+```
+
+### Using pip
+
+```bash
+# Install from source
+pip install -e .
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Verify installation
+ai-config --help
+```
+
+### Development Installation
+
+```bash
+# Clone and install for development
+git clone <repository-url>
+cd ai-configurator
+pip install -r requirements-dev.txt
+pip install -e .
+
+# Run tests
+python test_install.py
+```
+
 ## 🚀 Quick Start
 
 ```bash

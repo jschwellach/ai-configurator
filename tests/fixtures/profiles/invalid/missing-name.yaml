@@ -1,0 +1,3 @@
+description: "Profile missing required name field"
+contexts:
+  - "contexts/test.md"

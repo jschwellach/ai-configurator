@@ -20,12 +20,23 @@ from .models import (
     ProfileConfig,
     ProfileContext,
     ValidationResult,
+    EnhancedProfileConfig,
+    HookConfig,
+    ContextFile,
+    ValidationReport,
 )
 from .platform import PlatformManager
+from .yaml_loader import YamlConfigLoader
+from .markdown_processor import MarkdownProcessor
+from .config_merger import ConfigurationMerger
+from .profile_manager import ProfileManager
+from .hook_manager import HookManager
+from .context_manager import ContextManager
+from .file_watcher import FileWatcher
 
 
 class ConfigurationManager(LoggerMixin):
-    """Manages Amazon Q CLI configuration files and operations."""
+    """Manages Amazon Q CLI configuration files and operations with YAML/MD support."""
     
     def __init__(self, platform_manager: Optional[PlatformManager] = None):
         self.platform = platform_manager or PlatformManager()
@@ -36,6 +47,61 @@ class ConfigurationManager(LoggerMixin):
         # Ensure directories exist
         self.platform.ensure_directories()
         self.backup_dir.mkdir(parents=True, exist_ok=True)
+        
+        # Initialize new YAML/MD components
+        self.yaml_loader = YamlConfigLoader(self.config_dir)
+        self.markdown_processor = MarkdownProcessor(base_path=self.config_dir)
+        self.config_merger = ConfigurationMerger()
+        self.profile_manager = ProfileManager(self.config_dir, self.yaml_loader)
+        self.hook_manager = HookManager(self.config_dir, self.yaml_loader)
+        self.context_manager = ContextManager(self.config_dir, self.markdown_processor)
+        
+        # Initialize file watcher for hot-reload
+        self.file_watcher = FileWatcher()
+        self._setup_file_watching()
+    
+    def _setup_file_watching(self):
+        """Set up file watching for hot-reload functionality."""
+        try:
+            # Watch profiles directory
+            profiles_dir = self.config_dir / "profiles"
+            if profiles_dir.exists():
+                self.file_watcher.watch_directory(profiles_dir, self._on_profile_change)
+            
+            # Watch hooks directory
+            hooks_dir = self.config_dir / "hooks"
+            if hooks_dir.exists():
+                self.file_watcher.watch_directory(hooks_dir, self._on_hook_change)
+            
+            # Watch contexts directory
+            contexts_dir = self.config_dir / "contexts"
+            if contexts_dir.exists():
+                self.file_watcher.watch_directory(contexts_dir, self._on_context_change)
+            
+            self.logger.info("File watching enabled for hot-reload")
+        except Exception as e:
+            self.logger.warning(f"Failed to setup file watching: {e}")
+    
+    def _on_profile_change(self, file_path: Path):
+        """Handle profile file changes."""
+        self.logger.info(f"Profile configuration changed: {file_path}")
+        # Clear cache if implemented
+        if hasattr(self.profile_manager, 'clear_cache'):
+            self.profile_manager.clear_cache()
+    
+    def _on_hook_change(self, file_path: Path):
+        """Handle hook file changes."""
+        self.logger.info(f"Hook configuration changed: {file_path}")
+        # Clear cache if implemented
+        if hasattr(self.hook_manager, 'clear_cache'):
+            self.hook_manager.clear_cache()
+    
+    def _on_context_change(self, file_path: Path):
+        """Handle context file changes."""
+        self.logger.info(f"Context file changed: {file_path}")
+        # Clear cache if implemented
+        if hasattr(self.context_manager, 'clear_cache'):
+            self.context_manager.clear_cache()
     
     def load_mcp_config(self) -> Optional[MCPConfiguration]:
         """Load MCP server configuration."""
@@ -145,7 +211,7 @@ class ConfigurationManager(LoggerMixin):
             return False
     
     def list_profiles(self) -> List[str]:
-        """List available profiles."""
+        """List available profiles (legacy JSON only for backward compatibility)."""
         profiles_dir = self.config_dir / "profiles"
         
         if not profiles_dir.exists():
@@ -347,3 +413,340 @@ class ConfigurationManager(LoggerMixin):
         except Exception as e:
             self.logger.error(f"Failed to save YAML file {file_path}: {e}")
             return False
+    
+    # Enhanced profile management methods
+    def load_enhanced_profile(self, profile_name: str) -> Optional[EnhancedProfileConfig]:
+        """Load enhanced profile configuration (YAML or JSON)."""
+        return self.profile_manager.load_profile(profile_name)
+    
+    def list_all_profiles(self) -> List[str]:
+        """List all available profiles (both YAML and JSON)."""
+        return self.profile_manager.list_profiles()
+    
+    def validate_profile(self, profile_name: str) -> ValidationReport:
+        """Validate a specific profile configuration."""
+        return self.profile_manager.validate_profile(profile_name)
+    
+    def activate_profile(self, profile_name: str) -> bool:
+        """Activate a profile and load its configuration."""
+        try:
+            profile = self.load_enhanced_profile(profile_name)
+            if not profile:
+                self.logger.error(f"Profile '{profile_name}' not found")
+                return False
+            
+            # Load associated contexts
+            contexts = []
+            for context_path in profile.contexts:
+                full_path = self.config_dir / context_path
+                if full_path.exists():
+                    context = self.load_context_file(full_path)
+                    if context:
+                        contexts.append(context)
+                else:
+                    self.logger.warning(f"Context file not found: {context_path}")
+            
+            # Load associated hooks
+            hooks = []
+            for trigger, hook_refs in profile.hooks.items():
+                for hook_ref in hook_refs:
+                    hook_name = hook_ref.get("name") if isinstance(hook_ref, dict) else hook_ref
+                    hook = self.load_hook(hook_name)
+                    if hook:
+                        hooks.append((trigger, hook))
+                    else:
+                        self.logger.warning(f"Hook not found: {hook_name}")
+            
+            self.logger.info(f"Profile '{profile_name}' activated with {len(contexts)} contexts and {len(hooks)} hooks")
+            return True
+            
+        except Exception as e:
+            self.logger.error(f"Failed to activate profile '{profile_name}': {e}")
+            return False
+    
+    # Hook management methods
+    def load_hook(self, hook_name: str) -> Optional[HookConfig]:
+        """Load a specific hook configuration."""
+        return self.hook_manager.load_hook_config(hook_name)
+    
+    def list_hooks(self) -> Dict[str, List[str]]:
+        """List all available hooks by category."""
+        return self.hook_manager.discover_hooks()
+    
+    def get_hooks_by_trigger(self, trigger: str) -> List[HookConfig]:
+        """Get all hooks for a specific trigger."""
+        from .models import HookTrigger
+        trigger_enum = HookTrigger(trigger) if isinstance(trigger, str) else trigger
+        return self.hook_manager.load_hooks_by_trigger(trigger_enum)
+    
+    def validate_hook(self, hook_name: str) -> ValidationReport:
+        """Validate a specific hook configuration."""
+        from .models import ConfigurationError
+        
+        errors = []
+        warnings = []
+        hook_file = self.config_dir / "hooks" / f"{hook_name}.yaml"
+        
+        # Check if hook exists
+        hook = self.load_hook(hook_name)
+        if not hook:
+            errors.append(ConfigurationError(
+                file_path=str(hook_file),
+                error_type="missing_file",
+                message=f"Hook not found: {hook_name}",
+                severity="error"
+            ))
+            return ValidationReport(is_valid=False, errors=errors, warnings=warnings)
+        
+        # Basic validation
+        if not hook.name:
+            errors.append(ConfigurationError(
+                file_path=str(hook_file),
+                error_type="missing_field",
+                message=f"Hook missing name: {hook_name}",
+                severity="error"
+            ))
+        
+        if not hook.trigger:
+            errors.append(ConfigurationError(
+                file_path=str(hook_file),
+                error_type="missing_field",
+                message=f"Hook missing trigger: {hook_name}",
+                severity="error"
+            ))
+        
+        if not hook.type:
+            errors.append(ConfigurationError(
+                file_path=str(hook_file),
+                error_type="missing_field",
+                message=f"Hook missing type: {hook_name}",
+                severity="error"
+            ))
+        
+        # Validate context sources if it's a context hook
+        if hook.type == "context" and hook.context:
+            for source in hook.context.sources:
+                source_path = self.config_dir / source
+                if not source_path.exists():
+                    warnings.append(ConfigurationError(
+                        file_path=str(hook_file),
+                        error_type="missing_reference",
+                        message=f"Hook context source not found: {source}",
+                        severity="warning"
+                    ))
+        
+        return ValidationReport(
+            is_valid=len(errors) == 0,
+            errors=errors,
+            warnings=warnings
+        )
+    
+    # Context management methods
+    def load_context_file(self, file_path: PathLike) -> Optional[ContextFile]:
+        """Load a context file with frontmatter processing."""
+        # Convert to relative path from config_dir
+        file_path = Path(file_path)
+        if file_path.is_absolute():
+            try:
+                relative_path = file_path.relative_to(self.config_dir)
+                path_str = str(relative_path)
+            except ValueError:
+                path_str = str(file_path)
+        else:
+            path_str = str(file_path)
+        
+        context_files = self.context_manager.load_context_files([path_str])
+        return context_files[0] if context_files else None
+    
+    def list_context_files(self) -> Dict[str, List[str]]:
+        """List all available context files by category."""
+        return self.context_manager.list_available_contexts()
+    
+    def validate_context_file(self, file_path: PathLike) -> ValidationReport:
+        """Validate a specific context file."""
+        from .models import ConfigurationError
+        
+        file_path = Path(file_path)
+        errors = []
+        warnings = []
+        
+        # Check if file exists
+        if not file_path.exists():
+            errors.append(ConfigurationError(
+                file_path=str(file_path),
+                error_type="missing_file",
+                message=f"Context file not found: {file_path}",
+                severity="error"
+            ))
+            return ValidationReport(is_valid=False, errors=errors, warnings=warnings)
+        
+        # Try to load the file
+        try:
+            context_file = self.load_context_file(file_path)
+            if not context_file:
+                errors.append(ConfigurationError(
+                    file_path=str(file_path),
+                    error_type="load_error",
+                    message=f"Failed to load context file: {file_path}",
+                    severity="error"
+                ))
+            else:
+                # Basic validation
+                if not context_file.content.strip():
+                    warnings.append(ConfigurationError(
+                        file_path=str(file_path),
+                        error_type="empty_content",
+                        message=f"Context file is empty: {file_path}",
+                        severity="warning"
+                    ))
+                
+                # Check frontmatter
+                if context_file.metadata:
+                    if 'title' not in context_file.metadata:
+                        warnings.append(ConfigurationError(
+                            file_path=str(file_path),
+                            error_type="missing_metadata",
+                            message=f"Context file missing title in frontmatter: {file_path}",
+                            severity="warning"
+                        ))
+        except Exception as e:
+            errors.append(ConfigurationError(
+                file_path=str(file_path),
+                error_type="validation_error",
+                message=f"Error validating context file {file_path}: {e}",
+                severity="error"
+            ))
+        
+        return ValidationReport(
+            is_valid=len(errors) == 0,
+            errors=errors,
+            warnings=warnings
+        )
+    
+    # Configuration merging and migration
+    def merge_configurations(self, yaml_config: Dict[str, Any], json_config: Dict[str, Any]) -> Dict[str, Any]:
+        """Merge YAML and JSON configurations."""
+        return self.config_merger.merge_profile_configs(yaml_config, json_config)
+    
+    def migrate_json_to_yaml(self, profile_name: str) -> bool:
+        """Migrate a JSON profile to YAML format."""
+        try:
+            yaml_config = self.config_merger.convert_json_to_yaml_profile(profile_name, self.config_dir)
+            if not yaml_config:
+                return False
+            
+            # Save the YAML configuration
+            yaml_file = self.config_dir / "profiles" / f"{profile_name}.yaml"
+            return self.save_yaml_file(yaml_file, yaml_config)
+            
+        except Exception as e:
+            self.logger.error(f"Failed to migrate profile '{profile_name}' to YAML: {e}")
+            return False
+    
+    # Enhanced validation
+    def validate_complete_configuration(self) -> ValidationReport:
+        """Perform comprehensive validation of all configuration components."""
+        from .models import ConfigurationError
+        
+        errors = []
+        warnings = []
+        
+        # Validate base configuration
+        base_validation = self.validate_configuration()
+        # Convert string errors/warnings to ConfigurationError objects
+        for error in base_validation.errors:
+            errors.append(ConfigurationError(
+                file_path="configuration",
+                error_type="config_error",
+                message=error,
+                severity="error"
+            ))
+        for warning in base_validation.warnings:
+            warnings.append(ConfigurationError(
+                file_path="configuration",
+                error_type="config_warning",
+                message=warning,
+                severity="warning"
+            ))
+        
+        # Validate all profiles
+        profiles_dict = self.list_all_profiles()
+        for profile_name in profiles_dict.keys():
+            profile_validation = self.validate_profile(profile_name)
+            if not profile_validation.is_valid:
+                errors.extend(profile_validation.errors)
+            warnings.extend(profile_validation.warnings)
+        
+        # Validate all hooks
+        hooks_dict = self.list_hooks()
+        all_hook_names = []
+        for category, hook_list in hooks_dict.items():
+            all_hook_names.extend(hook_list)
+        
+        for hook_name in all_hook_names:
+            hook_validation = self.validate_hook(hook_name)
+            if not hook_validation.is_valid:
+                errors.extend(hook_validation.errors)
+            warnings.extend(hook_validation.warnings)
+        
+        # Validate context files
+        context_files_dict = self.list_context_files()
+        all_context_files = []
+        for category, file_list in context_files_dict.items():
+            for file_path in file_list:
+                all_context_files.append(self.config_dir / file_path)
+        
+        for context_file in all_context_files:
+            context_validation = self.validate_context_file(context_file)
+            if not context_validation.is_valid:
+                errors.extend(context_validation.errors)
+            warnings.extend(context_validation.warnings)
+        
+        return ValidationReport(
+            is_valid=len(errors) == 0,
+            errors=errors,
+            warnings=warnings
+        )
+    
+    # Workflow execution methods
+    def execute_profile_workflow(self, profile_name: str) -> bool:
+        """Execute complete profile activation workflow."""
+        try:
+            # Validate profile first
+            validation = self.validate_profile(profile_name)
+            if not validation.is_valid:
+                self.logger.error(f"Profile validation failed: {validation.errors}")
+                return False
+            
+            # Activate profile
+            if not self.activate_profile(profile_name):
+                return False
+            
+            # Execute session start hooks
+            session_hooks = self.get_hooks_by_trigger("on_session_start")
+            for hook in session_hooks:
+                self.logger.info(f"Executing session start hook: {hook.name}")
+                # Hook execution would be implemented here
+            
+            self.logger.info(f"Profile workflow completed for '{profile_name}'")
+            return True
+            
+        except Exception as e:
+            self.logger.error(f"Profile workflow failed for '{profile_name}': {e}")
+            return False
+    
+    def cleanup(self):
+        """Clean up resources and stop file watching."""
+        try:
+            self.file_watcher.stop_watching()
+            self.logger.info("Configuration manager cleanup completed")
+        except Exception as e:
+            self.logger.warning(f"Error during cleanup: {e}")
+    
+    def __enter__(self):
+        """Context manager entry."""
+        return self
+    
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        """Context manager exit."""
+        self.cleanup()

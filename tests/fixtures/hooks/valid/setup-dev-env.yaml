@@ -1,0 +1,18 @@
+name: "setup-dev-env"
+description: "Initialize development environment"
+version: "1.0"
+type: "context"
+trigger: "on_session_start"
+timeout: 30
+enabled: true
+
+context:
+  sources:
+    - "contexts/development-setup.md"
+    - "contexts/troubleshooting.md"
+  tags: ["setup", "development"]
+  priority: 1
+
+conditions:
+  - profile: ["developer", "solutions-architect"]
+    platform: ["darwin", "linux"]

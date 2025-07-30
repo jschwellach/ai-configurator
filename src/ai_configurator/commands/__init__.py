@@ -1,3 +1,7 @@
 """CLI command implementations."""
 
-# Commands will be added here as we implement them
+from .context import context
+from .hooks import hooks
+from .migrate import migrate
+
+__all__ = ["context", "hooks", "migrate"]

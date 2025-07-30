@@ -1,9 +1,10 @@
 """Configuration data models using Pydantic."""
 
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional, Union, Literal
+from enum import Enum
 
-from pydantic import BaseModel, Field, ConfigDict
+from pydantic import BaseModel, Field, ConfigDict, validator
 
 
 class MCPServerConfig(BaseModel):
@@ -94,6 +95,202 @@ class ConfigurationState(BaseModel):
     platform: str = Field(..., description="Current platform")
 
 
+# Enums for YAML configuration
+class HookType(str, Enum):
+    """Types of hooks supported in YAML configuration."""
+    CONTEXT = "context"
+    SCRIPT = "script"
+    HYBRID = "hybrid"
+
+
+class HookTrigger(str, Enum):
+    """Hook trigger events."""
+    ON_SESSION_START = "on_session_start"
+    PER_USER_MESSAGE = "per_user_message"
+    ON_FILE_CHANGE = "on_file_change"
+    ON_PROFILE_SWITCH = "on_profile_switch"
+
+
+class ValidationLevel(str, Enum):
+    """Configuration validation levels."""
+    STRICT = "strict"
+    NORMAL = "normal"
+    PERMISSIVE = "permissive"
+
+
+# Enhanced YAML Configuration Models
+
+class ConditionConfig(BaseModel):
+    """Condition configuration for hooks."""
+    
+    model_config = ConfigDict(populate_by_name=True)
+    
+    profile: Optional[List[str]] = Field(None, description="Profiles where this condition applies")
+    platform: Optional[List[str]] = Field(None, description="Platforms where this condition applies")
+    environment: Optional[Dict[str, str]] = Field(None, description="Environment variables that must match")
+
+
+class ScriptConfig(BaseModel):
+    """Script configuration for hooks."""
+    
+    model_config = ConfigDict(populate_by_name=True)
+    
+    command: str = Field(..., description="Command to execute")
+    args: List[str] = Field(default_factory=list, description="Command arguments")
+    env: Dict[str, str] = Field(default_factory=dict, description="Environment variables")
+    working_dir: Optional[str] = Field(None, description="Working directory for script execution")
+    timeout: int = Field(default=30, description="Script execution timeout in seconds")
+
+
+class ContextConfig(BaseModel):
+    """Context configuration for hooks and profiles."""
+    
+    model_config = ConfigDict(populate_by_name=True)
+    
+    sources: List[str] = Field(default_factory=list, description="Context source file paths")
+    tags: List[str] = Field(default_factory=list, description="Context tags for organization")
+    categories: List[str] = Field(default_factory=list, description="Context categories")
+    priority: int = Field(default=0, description="Context loading priority")
+    cache_ttl: Optional[int] = Field(None, description="Cache time-to-live in seconds")
+
+
+class HookReference(BaseModel):
+    """Reference to a hook in profile configuration."""
+    
+    model_config = ConfigDict(populate_by_name=True)
+    
+    name: str = Field(..., description="Hook name")
+    enabled: bool = Field(default=True, description="Whether the hook is enabled")
+    timeout: Optional[int] = Field(None, description="Override timeout for this hook")
+    config: Dict[str, Any] = Field(default_factory=dict, description="Hook-specific configuration")
+
+
+class HookConfig(BaseModel):
+    """Complete hook configuration for YAML files."""
+    
+    model_config = ConfigDict(populate_by_name=True)
+    
+    name: str = Field(..., description="Hook name")
+    description: Optional[str] = Field(None, description="Hook description")
+    version: str = Field(default="1.0", description="Hook configuration version")
+    type: HookType = Field(default=HookType.CONTEXT, description="Hook type")
+    trigger: HookTrigger = Field(..., description="Hook trigger event")
+    timeout: int = Field(default=30, description="Hook execution timeout")
+    enabled: bool = Field(default=True, description="Whether the hook is enabled by default")
+    context: Optional[ContextConfig] = Field(None, description="Context configuration")
+    script: Optional[ScriptConfig] = Field(None, description="Script configuration")
+    conditions: List[ConditionConfig] = Field(default_factory=list, description="Execution conditions")
+    metadata: Dict[str, Any] = Field(default_factory=dict, description="Additional metadata")
+    
+    @validator('type', 'trigger')
+    def validate_enums(cls, v):
+        """Validate enum values."""
+        return v
+
+
+class ProfileSettings(BaseModel):
+    """Profile-specific settings."""
+    
+    model_config = ConfigDict(populate_by_name=True)
+    
+    auto_backup: bool = Field(default=True, description="Enable automatic backups")
+    validation_level: ValidationLevel = Field(default=ValidationLevel.NORMAL, description="Validation strictness")
+    hot_reload: bool = Field(default=True, description="Enable hot-reloading of configurations")
+    cache_enabled: bool = Field(default=True, description="Enable configuration caching")
+    max_context_size: Optional[int] = Field(None, description="Maximum context size in characters")
+
+
+class EnhancedProfileConfig(BaseModel):
+    """Enhanced profile configuration for YAML files."""
+    
+    model_config = ConfigDict(populate_by_name=True)
+    
+    name: str = Field(..., description="Profile name")
+    description: Optional[str] = Field(None, description="Profile description")
+    version: str = Field(default="1.0", description="Profile configuration version")
+    contexts: List[str] = Field(default_factory=list, description="Context file paths")
+    hooks: Dict[HookTrigger, List[HookReference]] = Field(default_factory=dict, description="Hook configurations by trigger")
+    mcp_servers: List[str] = Field(default_factory=list, description="MCP server names to enable")
+    settings: ProfileSettings = Field(default_factory=ProfileSettings, description="Profile settings")
+    metadata: Dict[str, Any] = Field(default_factory=dict, description="Additional metadata")
+    
+    @validator('hooks')
+    def validate_hooks(cls, v):
+        """Validate hook configuration structure."""
+        if not isinstance(v, dict):
+            return v
+        
+        # Convert string keys to HookTrigger enums if needed
+        validated_hooks = {}
+        for trigger, hook_list in v.items():
+            if isinstance(trigger, str):
+                try:
+                    trigger_enum = HookTrigger(trigger)
+                    validated_hooks[trigger_enum] = hook_list
+                except ValueError:
+                    # Keep original key if it's not a valid enum
+                    validated_hooks[trigger] = hook_list
+            else:
+                validated_hooks[trigger] = hook_list
+        
+        return validated_hooks
+
+
+class ContextFile(BaseModel):
+    """Represents a context file with frontmatter metadata."""
+    
+    model_config = ConfigDict(populate_by_name=True)
+    
+    file_path: str = Field(..., description="Path to the context file")
+    content: str = Field(..., description="File content")
+    metadata: Dict[str, Any] = Field(default_factory=dict, description="YAML frontmatter metadata")
+    tags: List[str] = Field(default_factory=list, description="Context tags")
+    categories: List[str] = Field(default_factory=list, description="Context categories")
+    priority: int = Field(default=0, description="Context priority")
+    last_modified: Optional[str] = Field(None, description="Last modification timestamp")
+
+
+class ConfigurationError(BaseModel):
+    """Represents a configuration error with context."""
+    
+    model_config = ConfigDict(populate_by_name=True)
+    
+    file_path: str = Field(..., description="Path to the file with error")
+    line_number: Optional[int] = Field(None, description="Line number where error occurred")
+    column_number: Optional[int] = Field(None, description="Column number where error occurred")
+    error_type: str = Field(..., description="Type of error")
+    message: str = Field(..., description="Error message")
+    context: Optional[str] = Field(None, description="Surrounding context")
+    severity: Literal["error", "warning", "info"] = Field(default="error", description="Error severity")
+
+
+class ValidationReport(BaseModel):
+    """Comprehensive validation report for configurations."""
+    
+    model_config = ConfigDict(populate_by_name=True)
+    
+    is_valid: bool = Field(..., description="Overall validation status")
+    errors: List[ConfigurationError] = Field(default_factory=list, description="Validation errors")
+    warnings: List[ConfigurationError] = Field(default_factory=list, description="Validation warnings")
+    info: List[ConfigurationError] = Field(default_factory=list, description="Informational messages")
+    files_checked: List[str] = Field(default_factory=list, description="Files that were validated")
+    summary: Dict[str, int] = Field(default_factory=dict, description="Summary statistics")
+
+
+class MigrationResult(BaseModel):
+    """Result of configuration migration from JSON to YAML."""
+    
+    model_config = ConfigDict(populate_by_name=True)
+    
+    success: bool = Field(..., description="Whether migration was successful")
+    migrated_files: List[str] = Field(default_factory=list, description="Successfully migrated files")
+    failed_files: List[str] = Field(default_factory=list, description="Files that failed to migrate")
+    backup_path: Optional[str] = Field(None, description="Path to backup directory")
+    errors: List[ConfigurationError] = Field(default_factory=list, description="Migration errors")
+    warnings: List[ConfigurationError] = Field(default_factory=list, description="Migration warnings")
+
+
 # Type aliases for convenience
 ConfigDict = Dict[str, Any]
 PathLike = Union[str, Path]
+YamlConfigDict = Dict[str, Any]

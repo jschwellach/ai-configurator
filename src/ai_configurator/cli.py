@@ -11,6 +11,8 @@ from rich.table import Table
 from . import __version__
 from .commands.context import context
 from .commands.hooks import hooks
+from .commands.migrate import migrate
+from .commands.structure import structure
 from .core import ConfigurationManager, PlatformManager
 from .utils.logging import setup_logging
 
@@ -31,7 +33,11 @@ console = Console()
 )
 @click.pass_context
 def cli(ctx: click.Context, verbose: bool, quiet: bool) -> None:
-    """AI Configurator - Cross-platform configuration manager for Amazon Q CLI."""
+    """AI Configurator - Cross-platform configuration manager for Amazon Q CLI.
+    
+    Supports both YAML and JSON configuration formats with automatic migration tools.
+    Use 'ai-config formats' to learn about configuration formats and migration options.
+    """
     ctx.ensure_object(dict)
     ctx.obj["verbose"] = verbose
     ctx.obj["quiet"] = quiet
@@ -69,6 +75,12 @@ def cli(ctx: click.Context, verbose: bool, quiet: bool) -> None:
     is_flag=True,
     help="Show what would be installed without actually installing"
 )
+@click.option(
+    "--format",
+    type=click.Choice(["yaml", "json", "auto"]),
+    default="auto",
+    help="Configuration format to use (auto detects based on existing files)"
+)
 @click.pass_context
 def install(
     ctx: click.Context, 
@@ -76,9 +88,10 @@ def install(
     mcp_servers: Optional[str], 
     force: bool,
     no_backup: bool,
-    dry_run: bool
+    dry_run: bool,
+    format: str
 ) -> None:
-    """Install Amazon Q CLI configuration."""
+    """Install Amazon Q CLI configuration (supports both YAML and JSON formats)."""
     from .core import InstallationManager, InstallationConfig
     
     platform = ctx.obj["platform"]
@@ -294,14 +307,20 @@ def update(ctx: click.Context, preserve_personal: bool, selective: str, check_on
 
 @cli.group()
 def profile() -> None:
-    """Manage configuration profiles."""
+    """Manage configuration profiles (supports both YAML and JSON formats)."""
     pass
 
 
 @profile.command("list")
+@click.option(
+    "--format", "-f",
+    type=click.Choice(["table", "yaml", "json"]),
+    default="table",
+    help="Output format for profile list"
+)
 @click.pass_context
-def profile_list(ctx: click.Context) -> None:
-    """List available profiles."""
+def profile_list(ctx: click.Context, format: str) -> None:
+    """List available profiles (supports both JSON and YAML configurations)."""
     config_manager = ctx.obj["config_manager"]
     profiles = config_manager.list_profiles()
     active_profile = config_manager.get_active_profile()
@@ -310,22 +329,59 @@ def profile_list(ctx: click.Context) -> None:
         console.print("[yellow]No profiles found.[/yellow]")
         return
     
-    table = Table(title="Available Profiles")
-    table.add_column("Profile", style="cyan")
-    table.add_column("Status", style="green")
-    
+    # Get detailed profile information including format
+    profile_details = []
     for profile_name in profiles:
-        status = "Active" if profile_name == active_profile else ""
-        table.add_row(profile_name, status)
+        try:
+            # Check if YAML version exists
+            yaml_path = config_manager.config_dir / "profiles" / f"{profile_name}.yaml"
+            json_path = config_manager.config_dir / "profiles" / profile_name / "context.json"
+            
+            config_format = "Unknown"
+            if yaml_path.exists() and json_path.exists():
+                config_format = "YAML+JSON"
+            elif yaml_path.exists():
+                config_format = "YAML"
+            elif json_path.exists():
+                config_format = "JSON"
+            
+            profile_details.append({
+                "name": profile_name,
+                "format": config_format,
+                "active": profile_name == active_profile
+            })
+        except Exception:
+            profile_details.append({
+                "name": profile_name,
+                "format": "Unknown",
+                "active": profile_name == active_profile
+            })
     
-    console.print(table)
+    if format == "json":
+        import json
+        console.print(json.dumps(profile_details, indent=2))
+    elif format == "yaml":
+        import yaml
+        console.print(yaml.dump(profile_details, default_flow_style=False))
+    else:
+        # Table format (default)
+        table = Table(title="Available Profiles")
+        table.add_column("Profile", style="cyan")
+        table.add_column("Format", style="blue")
+        table.add_column("Status", style="green")
+        
+        for profile in profile_details:
+            status = "✅ Active" if profile["active"] else ""
+            table.add_row(profile["name"], profile["format"], status)
+        
+        console.print(table)
 
 
 @profile.command("switch")
 @click.argument("profile_name")
 @click.pass_context
 def profile_switch(ctx: click.Context, profile_name: str) -> None:
-    """Switch to a different profile."""
+    """Switch to a different profile (supports both JSON and YAML configurations)."""
     config_manager = ctx.obj["config_manager"]
     profiles = config_manager.list_profiles()
     
@@ -335,6 +391,419 @@ def profile_switch(ctx: click.Context, profile_name: str) -> None:
         sys.exit(1)
     
     console.print(f"[yellow]Switching to profile '{profile_name}' - functionality coming soon![/yellow]")
+
+
+@profile.command("create")
+@click.argument("profile_name")
+@click.option(
+    "--format", "-f",
+    type=click.Choice(["yaml", "json"]),
+    default="yaml",
+    help="Configuration format for new profile"
+)
+@click.option(
+    "--description", "-d",
+    help="Profile description"
+)
+@click.option(
+    "--template", "-t",
+    help="Template profile to copy from"
+)
+@click.pass_context
+def profile_create(ctx: click.Context, profile_name: str, format: str, description: str, template: str) -> None:
+    """Create a new profile in YAML or JSON format."""
+    config_manager = ctx.obj["config_manager"]
+    profiles = config_manager.list_profiles()
+    
+    if profile_name in profiles:
+        console.print(f"[red]Profile '{profile_name}' already exists.[/red]")
+        sys.exit(1)
+    
+    if format == "yaml":
+        # Create YAML profile
+        profile_path = config_manager.config_dir / "profiles" / f"{profile_name}.yaml"
+        profile_path.parent.mkdir(parents=True, exist_ok=True)
+        
+        # Create basic YAML structure
+        profile_config = {
+            "name": profile_name,
+            "description": description or f"Profile: {profile_name}",
+            "version": "1.0",
+            "contexts": [],
+            "hooks": {},
+            "mcp_servers": [],
+            "settings": {
+                "auto_backup": True,
+                "validation_level": "normal",
+                "hot_reload": True,
+                "cache_enabled": True
+            },
+            "metadata": {
+                "created_date": ctx.obj["config_manager"]._get_current_timestamp() if hasattr(ctx.obj["config_manager"], '_get_current_timestamp') else "unknown"
+            }
+        }
+        
+        # Copy from template if specified
+        if template:
+            if template in profiles:
+                template_yaml = config_manager.config_dir / "profiles" / f"{template}.yaml"
+                if template_yaml.exists():
+                    import yaml
+                    with open(template_yaml, 'r', encoding='utf-8') as f:
+                        template_config = yaml.safe_load(f)
+                    
+                    # Merge template config but keep new name and description
+                    profile_config.update(template_config)
+                    profile_config["name"] = profile_name
+                    if description:
+                        profile_config["description"] = description
+                else:
+                    console.print(f"[yellow]Template '{template}' is not in YAML format, using default structure.[/yellow]")
+            else:
+                console.print(f"[red]Template profile '{template}' not found.[/red]")
+                sys.exit(1)
+        
+        # Write YAML file
+        import yaml
+        with open(profile_path, 'w', encoding='utf-8') as f:
+            yaml.dump(profile_config, f, default_flow_style=False, allow_unicode=True, sort_keys=False)
+        
+        console.print(f"[green]✅ YAML profile '{profile_name}' created at {profile_path}[/green]")
+    
+    else:
+        # Create JSON profile (legacy format)
+        profile_dir = config_manager.config_dir / "profiles" / profile_name
+        profile_dir.mkdir(parents=True, exist_ok=True)
+        
+        context_file = profile_dir / "context.json"
+        hooks_file = profile_dir / "hooks.json"
+        
+        # Create basic JSON structure
+        context_config = {
+            "paths": [],
+            "description": description or f"Profile: {profile_name}"
+        }
+        
+        hooks_config = {
+            "on_session_start": [],
+            "per_user_message": [],
+            "on_file_change": []
+        }
+        
+        # Copy from template if specified
+        if template:
+            if template in profiles:
+                template_dir = config_manager.config_dir / "profiles" / template
+                template_context = template_dir / "context.json"
+                template_hooks = template_dir / "hooks.json"
+                
+                if template_context.exists():
+                    import json
+                    with open(template_context, 'r', encoding='utf-8') as f:
+                        context_config = json.load(f)
+                    if description:
+                        context_config["description"] = description
+                
+                if template_hooks.exists():
+                    import json
+                    with open(template_hooks, 'r', encoding='utf-8') as f:
+                        hooks_config = json.load(f)
+            else:
+                console.print(f"[red]Template profile '{template}' not found.[/red]")
+                sys.exit(1)
+        
+        # Write JSON files
+        import json
+        with open(context_file, 'w', encoding='utf-8') as f:
+            json.dump(context_config, f, indent=2)
+        
+        with open(hooks_file, 'w', encoding='utf-8') as f:
+            json.dump(hooks_config, f, indent=2)
+        
+        console.print(f"[green]✅ JSON profile '{profile_name}' created at {profile_dir}[/green]")
+    
+    # Show next steps
+    console.print("\n[bold blue]Next steps:[/bold blue]")
+    console.print(f"1. Edit the profile configuration")
+    console.print(f"2. Add context paths and hook definitions")
+    console.print(f"3. Test the profile: [cyan]ai-config profile validate {profile_name}[/cyan]")
+
+
+@profile.command("validate")
+@click.argument("profile_name", required=False)
+@click.option(
+    "--all", "-a",
+    is_flag=True,
+    help="Validate all profiles"
+)
+@click.pass_context
+def profile_validate(ctx: click.Context, profile_name: str, all: bool) -> None:
+    """Validate profile configurations (supports both JSON and YAML)."""
+    config_manager = ctx.obj["config_manager"]
+    
+    if all:
+        profiles = config_manager.list_profiles()
+        if not profiles:
+            console.print("[yellow]No profiles found to validate.[/yellow]")
+            return
+    else:
+        if not profile_name:
+            console.print("[red]Please specify a profile name or use --all flag.[/red]")
+            sys.exit(1)
+        
+        profiles = [profile_name]
+        if profile_name not in config_manager.list_profiles():
+            console.print(f"[red]Profile '{profile_name}' not found.[/red]")
+            sys.exit(1)
+    
+    console.print("[blue]Validating profile configurations...[/blue]\n")
+    
+    total_errors = 0
+    total_warnings = 0
+    
+    for profile in profiles:
+        console.print(f"[bold cyan]Validating profile: {profile}[/bold cyan]")
+        
+        # Check both YAML and JSON formats
+        yaml_path = config_manager.config_dir / "profiles" / f"{profile}.yaml"
+        json_dir = config_manager.config_dir / "profiles" / profile
+        
+        profile_errors = []
+        profile_warnings = []
+        
+        if yaml_path.exists():
+            # Validate YAML profile
+            try:
+                import yaml
+                with open(yaml_path, 'r', encoding='utf-8') as f:
+                    yaml_config = yaml.safe_load(f)
+                
+                # Basic validation
+                required_fields = ["name", "version"]
+                for field in required_fields:
+                    if field not in yaml_config:
+                        profile_errors.append(f"Missing required field: {field}")
+                
+                # Validate contexts exist
+                if "contexts" in yaml_config:
+                    for context_path in yaml_config["contexts"]:
+                        if not context_path.startswith("*") and not context_path.endswith("*"):
+                            full_path = config_manager.config_dir / context_path
+                            if not full_path.exists():
+                                profile_warnings.append(f"Context file not found: {context_path}")
+                
+                console.print(f"  ✅ YAML format validation passed")
+                
+            except yaml.YAMLError as e:
+                profile_errors.append(f"YAML syntax error: {e}")
+            except Exception as e:
+                profile_errors.append(f"YAML validation error: {e}")
+        
+        if json_dir.exists() and (json_dir / "context.json").exists():
+            # Validate JSON profile
+            try:
+                import json
+                context_file = json_dir / "context.json"
+                with open(context_file, 'r', encoding='utf-8') as f:
+                    json_config = json.load(f)
+                
+                # Validate contexts exist
+                if "paths" in json_config:
+                    for context_path in json_config["paths"]:
+                        if not context_path.startswith("*") and not context_path.endswith("*"):
+                            full_path = config_manager.config_dir / context_path
+                            if not full_path.exists():
+                                profile_warnings.append(f"Context file not found: {context_path}")
+                
+                console.print(f"  ✅ JSON format validation passed")
+                
+            except json.JSONDecodeError as e:
+                profile_errors.append(f"JSON syntax error: {e}")
+            except Exception as e:
+                profile_errors.append(f"JSON validation error: {e}")
+        
+        # Show results for this profile
+        if profile_errors:
+            console.print(f"  [red]❌ {len(profile_errors)} errors found[/red]")
+            for error in profile_errors:
+                console.print(f"    • {error}")
+            total_errors += len(profile_errors)
+        
+        if profile_warnings:
+            console.print(f"  [yellow]⚠️ {len(profile_warnings)} warnings found[/yellow]")
+            for warning in profile_warnings:
+                console.print(f"    • {warning}")
+            total_warnings += len(profile_warnings)
+        
+        if not profile_errors and not profile_warnings:
+            console.print(f"  [green]✅ Profile is valid[/green]")
+        
+        console.print()
+    
+    # Summary
+    if total_errors > 0:
+        console.print(f"[bold red]❌ Validation completed with {total_errors} errors and {total_warnings} warnings[/bold red]")
+        sys.exit(1)
+    elif total_warnings > 0:
+        console.print(f"[bold yellow]⚠️ Validation completed with {total_warnings} warnings[/bold yellow]")
+    else:
+        console.print(f"[bold green]✅ All profiles are valid![/bold green]")
+
+
+@profile.command("convert")
+@click.argument("profile_name")
+@click.option(
+    "--to-format", "-t",
+    type=click.Choice(["yaml", "json"]),
+    required=True,
+    help="Target format for conversion"
+)
+@click.option(
+    "--backup", "-b",
+    is_flag=True,
+    help="Create backup before conversion"
+)
+@click.pass_context
+def profile_convert(ctx: click.Context, profile_name: str, to_format: str, backup: bool) -> None:
+    """Convert profile between JSON and YAML formats."""
+    config_manager = ctx.obj["config_manager"]
+    profiles = config_manager.list_profiles()
+    
+    if profile_name not in profiles:
+        console.print(f"[red]Profile '{profile_name}' not found.[/red]")
+        sys.exit(1)
+    
+    yaml_path = config_manager.config_dir / "profiles" / f"{profile_name}.yaml"
+    json_dir = config_manager.config_dir / "profiles" / profile_name
+    
+    if to_format == "yaml":
+        # Convert JSON to YAML
+        if not json_dir.exists() or not (json_dir / "context.json").exists():
+            console.print(f"[red]No JSON configuration found for profile '{profile_name}'.[/red]")
+            sys.exit(1)
+        
+        if yaml_path.exists():
+            console.print(f"[yellow]YAML configuration already exists for profile '{profile_name}'.[/yellow]")
+            if not click.confirm("Overwrite existing YAML configuration?"):
+                return
+        
+        # Create backup if requested
+        if backup:
+            backup_id = config_manager.create_backup(f"Before converting {profile_name} to YAML")
+            if backup_id:
+                console.print(f"[green]Backup created: {backup_id}[/green]")
+        
+        # Load JSON configuration
+        import json
+        context_file = json_dir / "context.json"
+        hooks_file = json_dir / "hooks.json"
+        
+        with open(context_file, 'r', encoding='utf-8') as f:
+            json_config = json.load(f)
+        
+        hooks_config = {}
+        if hooks_file.exists():
+            with open(hooks_file, 'r', encoding='utf-8') as f:
+                hooks_config = json.load(f)
+        
+        # Convert to YAML format
+        yaml_config = {
+            "name": profile_name,
+            "description": json_config.get("description", f"Converted profile: {profile_name}"),
+            "version": "1.0",
+            "contexts": json_config.get("paths", []),
+            "hooks": {},
+            "mcp_servers": [],
+            "settings": {
+                "auto_backup": True,
+                "validation_level": "normal",
+                "hot_reload": True,
+                "cache_enabled": True
+            },
+            "metadata": {
+                "converted_from": "json",
+                "conversion_date": "unknown"
+            }
+        }
+        
+        # Convert hooks
+        for trigger, commands in hooks_config.items():
+            if commands:
+                hook_refs = []
+                for i, command in enumerate(commands):
+                    hook_refs.append({
+                        "name": f"{profile_name}_{trigger}_{i}",
+                        "enabled": True,
+                        "config": {
+                            "command": command,
+                            "converted": True
+                        }
+                    })
+                yaml_config["hooks"][trigger] = hook_refs
+        
+        # Write YAML file
+        import yaml
+        with open(yaml_path, 'w', encoding='utf-8') as f:
+            yaml.dump(yaml_config, f, default_flow_style=False, allow_unicode=True, sort_keys=False)
+        
+        console.print(f"[green]✅ Profile '{profile_name}' converted to YAML format[/green]")
+        console.print(f"[blue]YAML file created: {yaml_path}[/blue]")
+    
+    else:
+        # Convert YAML to JSON
+        if not yaml_path.exists():
+            console.print(f"[red]No YAML configuration found for profile '{profile_name}'.[/red]")
+            sys.exit(1)
+        
+        if json_dir.exists() and (json_dir / "context.json").exists():
+            console.print(f"[yellow]JSON configuration already exists for profile '{profile_name}'.[/yellow]")
+            if not click.confirm("Overwrite existing JSON configuration?"):
+                return
+        
+        # Create backup if requested
+        if backup:
+            backup_id = config_manager.create_backup(f"Before converting {profile_name} to JSON")
+            if backup_id:
+                console.print(f"[green]Backup created: {backup_id}[/green]")
+        
+        # Load YAML configuration
+        import yaml
+        with open(yaml_path, 'r', encoding='utf-8') as f:
+            yaml_config = yaml.safe_load(f)
+        
+        # Convert to JSON format
+        json_dir.mkdir(parents=True, exist_ok=True)
+        
+        context_config = {
+            "paths": yaml_config.get("contexts", []),
+            "description": yaml_config.get("description", f"Converted profile: {profile_name}")
+        }
+        
+        hooks_config = {}
+        for trigger, hook_refs in yaml_config.get("hooks", {}).items():
+            commands = []
+            for hook_ref in hook_refs:
+                if isinstance(hook_ref, dict) and "config" in hook_ref:
+                    command = hook_ref["config"].get("command", "")
+                    if command:
+                        commands.append(command)
+            hooks_config[trigger] = commands
+        
+        # Write JSON files
+        import json
+        with open(json_dir / "context.json", 'w', encoding='utf-8') as f:
+            json.dump(context_config, f, indent=2)
+        
+        with open(json_dir / "hooks.json", 'w', encoding='utf-8') as f:
+            json.dump(hooks_config, f, indent=2)
+        
+        console.print(f"[green]✅ Profile '{profile_name}' converted to JSON format[/green]")
+        console.print(f"[blue]JSON files created in: {json_dir}[/blue]")
+    
+    console.print("\n[bold blue]Next steps:[/bold blue]")
+    console.print(f"1. Validate the converted profile: [cyan]ai-config profile validate {profile_name}[/cyan]")
+    console.print(f"2. Test the profile configuration")
+    console.print(f"3. Remove old format files if conversion was successful")
 
 
 @cli.command()
@@ -403,9 +872,20 @@ def restore(ctx: click.Context, backup_id: str) -> None:
 
 
 @cli.command()
+@click.option(
+    "--format",
+    type=click.Choice(["all", "yaml", "json"]),
+    default="all",
+    help="Validate specific configuration format"
+)
+@click.option(
+    "--strict",
+    is_flag=True,
+    help="Use strict validation mode"
+)
 @click.pass_context
-def validate(ctx: click.Context) -> None:
-    """Validate current configuration."""
+def validate(ctx: click.Context, format: str, strict: bool) -> None:
+    """Validate current configuration (supports both YAML and JSON formats)."""
     config_manager = ctx.obj["config_manager"]
     
     console.print("[bold blue]Validating Amazon Q CLI Configuration[/bold blue]\n")
@@ -439,37 +919,87 @@ def validate(ctx: click.Context) -> None:
 
 
 @cli.command()
+@click.option(
+    "--format",
+    type=click.Choice(["table", "yaml", "json"]),
+    default="table",
+    help="Output format for status information"
+)
 @click.pass_context
-def status(ctx: click.Context) -> None:
-    """Show current configuration status."""
+def status(ctx: click.Context, format: str) -> None:
+    """Show current configuration status (includes YAML/JSON format information)."""
     config_manager = ctx.obj["config_manager"]
     state = config_manager.get_configuration_state()
     
-    # Create status table
-    table = Table(title="AI Configurator Status", show_header=False)
-    table.add_column("Property", style="bold cyan")
-    table.add_column("Value", style="green")
+    # Get configuration format information
+    yaml_profiles = 0
+    json_profiles = 0
+    yaml_hooks = 0
     
-    table.add_row("Platform", state.platform)
-    table.add_row("AI Configurator Version", state.ai_configurator_version)
-    table.add_row("Amazon Q CLI", "✅ Installed" if state.amazonq_installed else "❌ Not Found")
+    profiles_dir = config_manager.config_dir / "profiles"
+    hooks_dir = config_manager.config_dir / "hooks"
     
-    if state.amazonq_version:
-        table.add_row("Amazon Q Version", state.amazonq_version)
+    if profiles_dir.exists():
+        yaml_profiles = len(list(profiles_dir.glob("*.yaml")))
+        json_profiles = len([d for d in profiles_dir.iterdir() if d.is_dir() and (d / "context.json").exists()])
     
-    table.add_row("Config Directory", state.config_dir_path)
-    table.add_row("Config Exists", "✅ Yes" if state.config_dir_exists else "❌ No")
+    if hooks_dir.exists():
+        yaml_hooks = len(list(hooks_dir.glob("*.yaml")))
     
-    if state.active_profile:
-        table.add_row("Active Profile", state.active_profile)
+    # Prepare status data
+    status_data = {
+        "platform": state.platform,
+        "ai_configurator_version": state.ai_configurator_version,
+        "amazonq_installed": state.amazonq_installed,
+        "amazonq_version": state.amazonq_version,
+        "config_dir_path": state.config_dir_path,
+        "config_dir_exists": state.config_dir_exists,
+        "active_profile": state.active_profile,
+        "installed_mcp_servers": len(state.installed_mcp_servers) if state.installed_mcp_servers else 0,
+        "last_backup": state.last_backup,
+        "yaml_profiles": yaml_profiles,
+        "json_profiles": json_profiles,
+        "yaml_hooks": yaml_hooks,
+        "total_profiles": yaml_profiles + json_profiles
+    }
     
-    if state.installed_mcp_servers:
-        table.add_row("MCP Servers", f"{len(state.installed_mcp_servers)} installed")
-    
-    if state.last_backup:
-        table.add_row("Last Backup", state.last_backup)
-    
-    console.print(table)
+    if format == "json":
+        import json
+        console.print(json.dumps(status_data, indent=2))
+    elif format == "yaml":
+        import yaml
+        console.print(yaml.dump(status_data, default_flow_style=False))
+    else:
+        # Table format (default)
+        table = Table(title="AI Configurator Status", show_header=False)
+        table.add_column("Property", style="bold cyan")
+        table.add_column("Value", style="green")
+        
+        table.add_row("Platform", state.platform)
+        table.add_row("AI Configurator Version", state.ai_configurator_version)
+        table.add_row("Amazon Q CLI", "✅ Installed" if state.amazonq_installed else "❌ Not Found")
+        
+        if state.amazonq_version:
+            table.add_row("Amazon Q Version", state.amazonq_version)
+        
+        table.add_row("Config Directory", state.config_dir_path)
+        table.add_row("Config Exists", "✅ Yes" if state.config_dir_exists else "❌ No")
+        
+        if state.active_profile:
+            table.add_row("Active Profile", state.active_profile)
+        
+        # Configuration format information
+        table.add_row("YAML Profiles", str(yaml_profiles))
+        table.add_row("JSON Profiles", str(json_profiles))
+        table.add_row("YAML Hooks", str(yaml_hooks))
+        
+        if state.installed_mcp_servers:
+            table.add_row("MCP Servers", f"{len(state.installed_mcp_servers)} installed")
+        
+        if state.last_backup:
+            table.add_row("Last Backup", state.last_backup)
+        
+        console.print(table)
 
 
 @cli.command()
@@ -560,6 +1090,428 @@ def maintenance(ctx: click.Context, cleanup: bool) -> None:
 # Add command groups
 cli.add_command(context)
 cli.add_command(hooks)
+cli.add_command(migrate)
+cli.add_command(structure)
+
+
+@cli.group()
+def yaml():
+    """Manage YAML configuration files."""
+    pass
+
+
+@yaml.command("validate")
+@click.option(
+    "--strict", "-s",
+    is_flag=True,
+    help="Use strict validation mode"
+)
+@click.pass_context
+def yaml_validate(ctx: click.Context, strict: bool) -> None:
+    """Validate all YAML configuration files."""
+    config_manager = ctx.obj["config_manager"]
+    
+    console.print("[blue]Validating YAML configuration files...[/blue]\n")
+    
+    # Find all YAML files
+    yaml_files = []
+    profiles_dir = config_manager.config_dir / "profiles"
+    hooks_dir = config_manager.config_dir / "hooks"
+    
+    if profiles_dir.exists():
+        yaml_files.extend(list(profiles_dir.glob("*.yaml")))
+    if hooks_dir.exists():
+        yaml_files.extend(list(hooks_dir.glob("*.yaml")))
+    
+    if not yaml_files:
+        console.print("[yellow]No YAML configuration files found.[/yellow]")
+        return
+    
+    total_errors = 0
+    total_warnings = 0
+    
+    for yaml_file in yaml_files:
+        console.print(f"[cyan]Validating: {yaml_file.name}[/cyan]")
+        
+        try:
+            import yaml
+            with open(yaml_file, 'r', encoding='utf-8') as f:
+                config = yaml.safe_load(f)
+            
+            errors = []
+            warnings = []
+            
+            # Basic YAML structure validation
+            if not isinstance(config, dict):
+                errors.append("Configuration must be a YAML object/dictionary")
+            else:
+                # Common validation for all YAML configs
+                if "name" not in config:
+                    errors.append("Missing required field: name")
+                
+                if "version" not in config:
+                    if strict:
+                        errors.append("Missing required field: version")
+                    else:
+                        warnings.append("Missing recommended field: version")
+                
+                # Profile-specific validation
+                if yaml_file.parent.name == "profiles":
+                    if "contexts" in config and not isinstance(config["contexts"], list):
+                        errors.append("Field 'contexts' must be a list")
+                    
+                    if "hooks" in config and not isinstance(config["hooks"], dict):
+                        errors.append("Field 'hooks' must be a dictionary")
+                    
+                    if "mcp_servers" in config and not isinstance(config["mcp_servers"], list):
+                        errors.append("Field 'mcp_servers' must be a list")
+                
+                # Hook-specific validation
+                elif yaml_file.parent.name == "hooks":
+                    required_hook_fields = ["trigger", "type"]
+                    for field in required_hook_fields:
+                        if field not in config:
+                            errors.append(f"Missing required field: {field}")
+                    
+                    if "trigger" in config:
+                        valid_triggers = ["on_session_start", "per_user_message", "on_file_change", "on_profile_switch"]
+                        if config["trigger"] not in valid_triggers:
+                            errors.append(f"Invalid trigger: {config['trigger']}. Valid triggers: {', '.join(valid_triggers)}")
+                    
+                    if "type" in config:
+                        valid_types = ["context", "script", "hybrid"]
+                        if config["type"] not in valid_types:
+                            errors.append(f"Invalid type: {config['type']}. Valid types: {', '.join(valid_types)}")
+            
+            # Show results
+            if errors:
+                console.print(f"  [red]❌ {len(errors)} errors found[/red]")
+                for error in errors:
+                    console.print(f"    • {error}")
+                total_errors += len(errors)
+            
+            if warnings:
+                console.print(f"  [yellow]⚠️ {len(warnings)} warnings found[/yellow]")
+                for warning in warnings:
+                    console.print(f"    • {warning}")
+                total_warnings += len(warnings)
+            
+            if not errors and not warnings:
+                console.print(f"  [green]✅ Valid[/green]")
+        
+        except yaml.YAMLError as e:
+            console.print(f"  [red]❌ YAML syntax error: {e}[/red]")
+            total_errors += 1
+        except Exception as e:
+            console.print(f"  [red]❌ Validation error: {e}[/red]")
+            total_errors += 1
+        
+        console.print()
+    
+    # Summary
+    console.print(f"[bold blue]Validation Summary:[/bold blue]")
+    console.print(f"• Files checked: {len(yaml_files)}")
+    console.print(f"• Errors: {total_errors}")
+    console.print(f"• Warnings: {total_warnings}")
+    
+    if total_errors > 0:
+        console.print(f"\n[bold red]❌ Validation failed with {total_errors} errors[/bold red]")
+        sys.exit(1)
+    elif total_warnings > 0:
+        console.print(f"\n[bold yellow]⚠️ Validation completed with {total_warnings} warnings[/bold yellow]")
+    else:
+        console.print(f"\n[bold green]✅ All YAML files are valid![/bold green]")
+
+
+@yaml.command("format")
+@click.option(
+    "--check", "-c",
+    is_flag=True,
+    help="Check formatting without making changes"
+)
+@click.pass_context
+def yaml_format(ctx: click.Context, check: bool) -> None:
+    """Format YAML configuration files with consistent style."""
+    config_manager = ctx.obj["config_manager"]
+    
+    # Find all YAML files
+    yaml_files = []
+    profiles_dir = config_manager.config_dir / "profiles"
+    hooks_dir = config_manager.config_dir / "hooks"
+    
+    if profiles_dir.exists():
+        yaml_files.extend(list(profiles_dir.glob("*.yaml")))
+    if hooks_dir.exists():
+        yaml_files.extend(list(hooks_dir.glob("*.yaml")))
+    
+    if not yaml_files:
+        console.print("[yellow]No YAML configuration files found.[/yellow]")
+        return
+    
+    console.print(f"[blue]{'Checking' if check else 'Formatting'} YAML files...[/blue]\n")
+    
+    formatted_files = []
+    error_files = []
+    
+    for yaml_file in yaml_files:
+        try:
+            import yaml
+            
+            # Read current content
+            with open(yaml_file, 'r', encoding='utf-8') as f:
+                original_content = f.read()
+                config = yaml.safe_load(original_content)
+            
+            # Format with consistent style
+            formatted_content = yaml.dump(
+                config,
+                default_flow_style=False,
+                allow_unicode=True,
+                sort_keys=False,
+                indent=2,
+                width=120
+            )
+            
+            # Add header comment if it's a profile or hook
+            if yaml_file.parent.name == "profiles":
+                header = f"# Profile Configuration: {config.get('name', yaml_file.stem)}\n"
+                if config.get('description'):
+                    header += f"# Description: {config['description']}\n"
+                header += f"# Format: YAML\n\n"
+                formatted_content = header + formatted_content
+            elif yaml_file.parent.name == "hooks":
+                header = f"# Hook Configuration: {config.get('name', yaml_file.stem)}\n"
+                if config.get('description'):
+                    header += f"# Description: {config['description']}\n"
+                header += f"# Trigger: {config.get('trigger', 'unknown')}\n"
+                header += f"# Format: YAML\n\n"
+                formatted_content = header + formatted_content
+            
+            if original_content.strip() != formatted_content.strip():
+                if check:
+                    console.print(f"[yellow]📝 {yaml_file.name} needs formatting[/yellow]")
+                else:
+                    with open(yaml_file, 'w', encoding='utf-8') as f:
+                        f.write(formatted_content)
+                    console.print(f"[green]✅ Formatted {yaml_file.name}[/green]")
+                formatted_files.append(yaml_file)
+            else:
+                console.print(f"[blue]✓ {yaml_file.name} already formatted[/blue]")
+        
+        except Exception as e:
+            console.print(f"[red]❌ Error processing {yaml_file.name}: {e}[/red]")
+            error_files.append(yaml_file)
+    
+    # Summary
+    console.print(f"\n[bold blue]Summary:[/bold blue]")
+    console.print(f"• Files processed: {len(yaml_files)}")
+    console.print(f"• Files {'needing formatting' if check else 'formatted'}: {len(formatted_files)}")
+    console.print(f"• Errors: {len(error_files)}")
+    
+    if check and formatted_files:
+        console.print(f"\n[yellow]Run without --check to format {len(formatted_files)} files[/yellow]")
+    elif not check and formatted_files:
+        console.print(f"\n[green]✅ Formatted {len(formatted_files)} files successfully![/green]")
+    elif not formatted_files and not error_files:
+        console.print(f"\n[green]✅ All files are already properly formatted![/green]")
+
+
+@yaml.command("schema")
+@click.option(
+    "--type", "-t",
+    type=click.Choice(["profile", "hook", "all"]),
+    default="all",
+    help="Show schema for specific configuration type"
+)
+@click.pass_context
+def yaml_schema(ctx: click.Context, type: str) -> None:
+    """Show YAML configuration schemas and examples."""
+    
+    if type in ["profile", "all"]:
+        console.print("[bold blue]Profile YAML Schema:[/bold blue]")
+        profile_schema = """
+# Profile Configuration Schema
+name: string                    # Required: Profile name
+description: string             # Optional: Profile description  
+version: string                 # Recommended: Configuration version (default: "1.0")
+
+contexts:                       # Optional: List of context file paths
+  - "contexts/development.md"
+  - "contexts/shared/*.md"
+  - "contexts/aws-*.md"
+
+hooks:                          # Optional: Hook configurations by trigger
+  on_session_start:
+    - name: "setup-env"
+      enabled: true
+      timeout: 30
+      config:
+        custom_param: "value"
+  
+  per_user_message:
+    - name: "context-enhancer"
+      enabled: true
+
+mcp_servers:                    # Optional: List of MCP server names
+  - "development"
+  - "core"
+
+settings:                       # Optional: Profile settings
+  auto_backup: true
+  validation_level: "normal"    # strict, normal, permissive
+  hot_reload: true
+  cache_enabled: true
+  max_context_size: 100000
+
+metadata:                       # Optional: Additional metadata
+  created_date: "2024-01-01"
+  author: "team"
+  tags: ["development", "aws"]
+"""
+        console.print(Panel(profile_schema.strip(), border_style="blue"))
+    
+    if type in ["hook", "all"]:
+        if type == "all":
+            console.print()
+        
+        console.print("[bold blue]Hook YAML Schema:[/bold blue]")
+        hook_schema = """
+# Hook Configuration Schema
+name: string                    # Required: Hook name
+description: string             # Optional: Hook description
+version: string                 # Recommended: Configuration version (default: "1.0")
+type: string                    # Required: "context", "script", or "hybrid"
+trigger: string                 # Required: Hook trigger event
+timeout: integer                # Optional: Execution timeout in seconds (default: 30)
+enabled: boolean                # Optional: Whether hook is enabled (default: true)
+
+# For context-type hooks
+context:
+  sources:                      # List of context source files
+    - "contexts/setup.md"
+    - "contexts/troubleshooting.md"
+  tags: ["setup", "dev"]        # Optional: Context tags
+  categories: ["development"]   # Optional: Context categories
+  priority: 0                   # Optional: Loading priority
+  cache_ttl: 3600              # Optional: Cache TTL in seconds
+
+# For script-type hooks  
+script:
+  command: "python"             # Command to execute
+  args: ["scripts/setup.py"]    # Command arguments
+  env:                          # Environment variables
+    DEV_MODE: "true"
+    DEBUG: "1"
+  working_dir: "scripts"        # Optional: Working directory
+  timeout: 60                   # Optional: Script timeout
+
+# Execution conditions
+conditions:
+  - profile: ["developer", "qa"] # Execute only for these profiles
+    platform: ["darwin", "linux"] # Execute only on these platforms
+    environment:                # Required environment variables
+      CI: "true"
+
+metadata:                       # Optional: Additional metadata
+  created_date: "2024-01-01"
+  author: "team"
+  documentation: "docs/hooks.md"
+
+# Valid trigger values:
+# - on_session_start: Execute when session starts
+# - per_user_message: Execute for each user message  
+# - on_file_change: Execute when files change
+# - on_profile_switch: Execute when switching profiles
+
+# Valid type values:
+# - context: Load context files only
+# - script: Execute script only  
+# - hybrid: Both load context and execute script
+"""
+        console.print(Panel(hook_schema.strip(), border_style="green"))
+    
+    console.print(f"\n[bold blue]Usage Examples:[/bold blue]")
+    console.print("• Create profile: [cyan]ai-config profile create my-profile --format yaml[/cyan]")
+    console.print("• Validate YAML: [cyan]ai-config yaml validate[/cyan]")
+    console.print("• Format files: [cyan]ai-config yaml format[/cyan]")
+    console.print("• Convert profile: [cyan]ai-config profile convert my-profile --to-format yaml[/cyan]")
+
+
+cli.add_command(yaml)
+
+
+@cli.command("formats")
+@click.pass_context
+def formats(ctx: click.Context) -> None:
+    """Show information about configuration formats and migration options."""
+    config_manager = ctx.obj["config_manager"]
+    
+    console.print("[bold blue]AI Configurator Configuration Formats[/bold blue]\n")
+    
+    # Format comparison table
+    table = Table(title="Format Comparison")
+    table.add_column("Feature", style="cyan")
+    table.add_column("YAML", style="green")
+    table.add_column("JSON", style="yellow")
+    
+    table.add_row("Human Readable", "✅ Excellent", "⚠️ Good")
+    table.add_row("Comments Support", "✅ Yes", "❌ No")
+    table.add_row("Frontmatter Support", "✅ Yes", "❌ No")
+    table.add_row("Schema Validation", "✅ Enhanced", "✅ Basic")
+    table.add_row("Hot Reload", "✅ Yes", "✅ Yes")
+    table.add_row("IDE Support", "✅ Excellent", "✅ Good")
+    table.add_row("Backward Compatibility", "✅ Full", "✅ Native")
+    table.add_row("Migration Tools", "✅ Available", "✅ Available")
+    
+    console.print(table)
+    
+    # Current configuration status
+    profiles_dir = config_manager.config_dir / "profiles"
+    hooks_dir = config_manager.config_dir / "hooks"
+    
+    yaml_profiles = 0
+    json_profiles = 0
+    yaml_hooks = 0
+    
+    if profiles_dir.exists():
+        yaml_profiles = len(list(profiles_dir.glob("*.yaml")))
+        json_profiles = len([d for d in profiles_dir.iterdir() if d.is_dir() and (d / "context.json").exists()])
+    
+    if hooks_dir.exists():
+        yaml_hooks = len(list(hooks_dir.glob("*.yaml")))
+    
+    console.print(f"\n[bold blue]Current Configuration:[/bold blue]")
+    console.print(f"• YAML Profiles: {yaml_profiles}")
+    console.print(f"• JSON Profiles: {json_profiles}")
+    console.print(f"• YAML Hooks: {yaml_hooks}")
+    
+    # Migration recommendations
+    console.print(f"\n[bold blue]Recommendations:[/bold blue]")
+    
+    if json_profiles > 0 and yaml_profiles == 0:
+        console.print("🔄 Consider migrating to YAML format for better maintainability:")
+        console.print("   [cyan]ai-config migrate run --all[/cyan]")
+    elif json_profiles > 0 and yaml_profiles > 0:
+        console.print("⚠️ Mixed format detected. Consider standardizing:")
+        console.print("   [cyan]ai-config migrate run --all[/cyan] (to migrate remaining JSON)")
+        console.print("   [cyan]ai-config profile convert <name> --to-format yaml[/cyan] (individual profiles)")
+    elif yaml_profiles > 0:
+        console.print("✅ Using modern YAML format - great choice!")
+        if yaml_hooks == 0:
+            console.print("💡 Consider creating YAML hooks for better organization:")
+            console.print("   [cyan]ai-config hooks create my-hook --type python[/cyan]")
+    else:
+        console.print("🚀 No configurations found. Start with YAML format:")
+        console.print("   [cyan]ai-config profile create my-profile --format yaml[/cyan]")
+    
+    # Available commands
+    console.print(f"\n[bold blue]Useful Commands:[/bold blue]")
+    console.print("• List profiles: [cyan]ai-config profile list --format table[/cyan]")
+    console.print("• Validate YAML: [cyan]ai-config yaml validate[/cyan]")
+    console.print("• Format YAML: [cyan]ai-config yaml format[/cyan]")
+    console.print("• Show schemas: [cyan]ai-config yaml schema[/cyan]")
+    console.print("• Migration preview: [cyan]ai-config migrate preview[/cyan]")
+    console.print("• Convert profile: [cyan]ai-config profile convert <name> --to-format yaml[/cyan]")
 
 
 def main() -> None:
