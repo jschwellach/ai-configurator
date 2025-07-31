@@ -230,10 +230,8 @@ $RECYCLE.BIN/
 .nfs*
 
 # Project-specific ignores
-# Test files and temporary directories
-test_*.py
-*_test.py
-test_*
+# Temporary directories and files
+# NOTE: Do NOT add test_*.py patterns here as they would exclude legitimate test files in tests/
 tmp/
 temp/
 *.tmp

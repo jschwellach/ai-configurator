@@ -7,14 +7,18 @@ This directory contains the comprehensive test suite for the AI Configurator YAM
 ### Unit Tests (`tests/unit/`)
 - `test_yaml_loader.py` - Unit tests for YamlConfigLoader functionality
 - `test_validator.py` - Unit tests for ConfigurationValidator functionality
+- `test_config_merger.py` - Unit tests for ConfigurationMerger functionality
+- `test_context_manager_markdown.py` - Unit tests for context manager markdown processing
+- `test_directory_manager.py` - Unit tests for directory management functionality
+- `test_file_watcher.py` - Unit tests for file watching functionality
+- `test_hook_manager_enhanced.py` - Unit tests for enhanced hook manager
+- `test_markdown_processor.py` - Unit tests for markdown processing
+- `test_profile_manager.py` - Unit tests for profile management
+- `test_yaml_loader_edge_cases.py` - Edge case tests for YAML loading
 
 ### Integration Tests (`tests/integration/`)
 - `test_profile_loading_workflow.py` - Integration tests for profile loading workflows
 - `test_hook_loading_workflow.py` - Integration tests for hook loading workflows
-
-### Comprehensive Tests
-- `test_comprehensive_yaml_validation.py` - Comprehensive test covering all requirements
-
 ### Test Fixtures (`tests/fixtures/`)
 - `profiles/valid/` - Valid profile configurations for testing
 - `profiles/invalid/` - Invalid profile configurations for error testing
@@ -99,7 +103,6 @@ python -m pytest tests/unit/ -v
 
 # Integration tests
 python -m pytest tests/integration/ -v
-```
 
 ### Validate Test Environment
 ```bash
