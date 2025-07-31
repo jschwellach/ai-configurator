@@ -18,44 +18,33 @@ Simplify the setup and sharing of Amazon Q CLI configurations across teams and e
 
 ## 📦 Installation
 
-### Using uvx (Recommended)
+### Quick Install
 
 ```bash
-# Install uv/uvx if you haven't already
+# Using uvx (recommended)
 pip install uv
-
-# Install AI Configurator from source
 uvx install --from . ai-configurator
 
-# Or run directly without installing
-uvx run --from . uvx_install.py --help
-```
-
-### Using pip
-
-```bash
-# Install from source
+# Using pip
 pip install -e .
-
-# Install dependencies
-pip install -r requirements.txt
 
 # Verify installation
 ai-config --help
 ```
 
-### Development Installation
+For detailed installation instructions, platform-specific guidance, and troubleshooting, see the [Installation Guide](docs/installation.md).
+
+### Development Setup
 
 ```bash
-# Clone and install for development
+# Clone and setup for development
 git clone <repository-url>
 cd ai-configurator
 pip install -r requirements-dev.txt
 pip install -e .
-
-# Run tests
-python test_install.py
 ```
+
+For complete development setup instructions, see [Development Setup](docs/development/setup.md).
 
 ## 🚀 Quick Start
 
@@ -105,33 +94,28 @@ ai-configurator/
 ## 🛠️ Development
 
 ```bash
-# Clone and setup
+# Quick development setup
 git clone https://github.com/your-org/ai-configurator.git
 cd ai-configurator
-
-# Create virtual environment
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-
-# Install in development mode
-pip install -e ".[dev]"
+pip install -r requirements-dev.txt
+pip install -e .
 
 # Run tests
+python test_install.py
 pytest
-
-# Format code
-black src/ tests/
-isort src/ tests/
 ```
+
+For complete development setup, package configuration, and contribution guidelines, see [Development Setup](docs/development/setup.md).
 
 ## 📖 Documentation
 
 - [Installation Guide](docs/installation.md)
-- [Configuration Guide](docs/configuration.md)
-- [Profile Management](docs/profiles.md)
-- [MCP Server Setup](docs/mcp-servers.md)
-- [Custom Hooks](docs/hooks.md)
-- [Troubleshooting](docs/troubleshooting.md)
+- [Development Setup](docs/development/setup.md)
+- Configuration Guide (coming soon)
+- Profile Management (coming soon)
+- MCP Server Setup (coming soon)
+- Custom Hooks (coming soon)
+- Troubleshooting (coming soon)
 
 ## 🤝 Contributing
 
