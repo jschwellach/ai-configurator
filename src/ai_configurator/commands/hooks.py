@@ -21,7 +21,12 @@ def hooks():
 @click.pass_context
 def hooks_list(ctx: click.Context):
     """List available hooks."""
-    hook_manager = HookManager(ctx.obj["platform"], ctx.obj["config_manager"])
+    config_manager = ctx.obj["config_manager"]
+    hook_manager = HookManager(
+        config_dir=config_manager.config_dir,
+        yaml_loader=config_manager.yaml_loader,
+        platform_manager=ctx.obj["platform"]
+    )
     
     hooks_info = hook_manager.list_available_hooks()
     
@@ -64,7 +69,12 @@ def hooks_list(ctx: click.Context):
 @click.pass_context
 def hooks_run(ctx: click.Context, hook_name: str, args: str = None, timeout: int = 30):
     """Execute a hook."""
-    hook_manager = HookManager(ctx.obj["platform"], ctx.obj["config_manager"])
+    config_manager = ctx.obj["config_manager"]
+    hook_manager = HookManager(
+        config_dir=config_manager.config_dir,
+        yaml_loader=config_manager.yaml_loader,
+        platform_manager=ctx.obj["platform"]
+    )
     
     # Parse arguments
     hook_args = args.split() if args else None
@@ -97,7 +107,12 @@ def hooks_run(ctx: click.Context, hook_name: str, args: str = None, timeout: int
 @click.pass_context
 def hooks_test(ctx: click.Context, hook_name: str):
     """Test a hook and show detailed results."""
-    hook_manager = HookManager(ctx.obj["platform"], ctx.obj["config_manager"])
+    config_manager = ctx.obj["config_manager"]
+    hook_manager = HookManager(
+        config_dir=config_manager.config_dir,
+        yaml_loader=config_manager.yaml_loader,
+        platform_manager=ctx.obj["platform"]
+    )
     
     console.print(f"[blue]Testing hook: {hook_name}[/blue]")
     
@@ -144,7 +159,12 @@ def hooks_test(ctx: click.Context, hook_name: str):
 @click.pass_context
 def hooks_validate(ctx: click.Context):
     """Validate all hooks."""
-    hook_manager = HookManager(ctx.obj["platform"], ctx.obj["config_manager"])
+    config_manager = ctx.obj["config_manager"]
+    hook_manager = HookManager(
+        config_dir=config_manager.config_dir,
+        yaml_loader=config_manager.yaml_loader,
+        platform_manager=ctx.obj["platform"]
+    )
     
     console.print("[blue]Validating hooks...[/blue]")
     
@@ -187,31 +207,37 @@ def hooks_validate(ctx: click.Context):
 @click.argument("hook_name")
 @click.option(
     "--type", "-t",
+    "hook_type",  # Use a different variable name to avoid shadowing built-in type()
     type=click.Choice(["python", "shell"]),
     default="python",
     help="Type of hook to create"
 )
 @click.pass_context
-def hooks_create(ctx: click.Context, hook_name: str, type: str):
+def hooks_create(ctx: click.Context, hook_name: str, hook_type: str):
     """Create a new hook from template."""
-    hook_manager = HookManager(ctx.obj["platform"], ctx.obj["config_manager"])
+    config_manager = ctx.obj["config_manager"]
+    hook_manager = HookManager(
+        config_dir=config_manager.config_dir,
+        yaml_loader=config_manager.yaml_loader,
+        platform_manager=ctx.obj["platform"]
+    )
     
-    console.print(f"[blue]Creating {type} hook: {hook_name}[/blue]")
+    console.print(f"[blue]Creating {hook_type} hook: {hook_name}[/blue]")
     
-    success = hook_manager.create_hook_template(hook_name, type)
+    success = hook_manager.create_script_hook_template(hook_name, hook_type)
     
     if success:
         console.print(f"[bold green]✅ Hook '{hook_name}' created successfully[/bold green]")
         
         # Show the created file path
-        hook_file = hook_manager.hooks_dir / f"{hook_name}.{'py' if type == 'python' else 'sh'}"
+        hook_file = hook_manager.hooks_dir / f"{hook_name}.{'py' if hook_type == 'python' else 'sh'}"
         console.print(f"[blue]Location:[/blue] {hook_file}")
         
         # Show next steps
         console.print("\n[bold blue]Next steps:[/bold blue]")
         console.print(f"1. Edit the hook file: {hook_file}")
-        console.print(f"2. Test the hook: [cyan]ai-config hooks test {hook_name}.{'py' if type == 'python' else 'sh'}[/cyan]")
-        console.print(f"3. Run the hook: [cyan]ai-config hooks run {hook_name}.{'py' if type == 'python' else 'sh'}[/cyan]")
+        console.print(f"2. Test the hook: [cyan]ai-config hooks test {hook_name}.{'py' if hook_type == 'python' else 'sh'}[/cyan]")
+        console.print(f"3. Run the hook: [cyan]ai-config hooks run {hook_name}.{'py' if hook_type == 'python' else 'sh'}[/cyan]")
     else:
         console.print(f"[bold red]❌ Failed to create hook '{hook_name}'[/bold red]")
 
@@ -221,7 +247,12 @@ def hooks_create(ctx: click.Context, hook_name: str, type: str):
 @click.pass_context
 def hooks_context(ctx: click.Context, context_name: str):
     """Load context using hooks."""
-    hook_manager = HookManager(ctx.obj["platform"], ctx.obj["config_manager"])
+    config_manager = ctx.obj["config_manager"]
+    hook_manager = HookManager(
+        config_dir=config_manager.config_dir,
+        yaml_loader=config_manager.yaml_loader,
+        platform_manager=ctx.obj["platform"]
+    )
     
     console.print(f"[blue]Loading context: {context_name}[/blue]")
     
@@ -243,7 +274,12 @@ def hooks_context(ctx: click.Context, context_name: str):
 @click.pass_context
 def hooks_config(ctx: click.Context):
     """Show hook configuration."""
-    hook_manager = HookManager(ctx.obj["platform"], ctx.obj["config_manager"])
+    config_manager = ctx.obj["config_manager"]
+    hook_manager = HookManager(
+        config_dir=config_manager.config_dir,
+        yaml_loader=config_manager.yaml_loader,
+        platform_manager=ctx.obj["platform"]
+    )
     
     config = hook_manager.load_hook_config()
     

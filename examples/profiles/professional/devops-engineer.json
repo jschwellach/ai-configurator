@@ -1,0 +1,368 @@
+{
+    // ============================================================================
+    // DEVOPS ENGINEER PROFILE
+    // ============================================================================
+    // This profile is designed for DevOps engineers, SREs, platform engineers,
+    // and infrastructure specialists. It provides contexts and automation tools
+    // specifically tailored for infrastructure management, CI/CD pipelines,
+    // monitoring, and deployment automation workflows.
+    // ============================================================================
+    // METADATA SECTION
+    "metadata": {
+        "name": "devops-engineer",
+        "description": "Profile optimized for DevOps engineers, SREs, and infrastructure specialists",
+        "category": "professional",
+        "version": "1.0.0",
+        "author": "AI Configurator Team",
+        "created": "2024-01-01",
+        "tags": [
+            "devops",
+            "infrastructure",
+            "ci-cd",
+            "monitoring",
+            "automation",
+            "kubernetes",
+            "docker",
+            "terraform",
+            "ansible"
+        ],
+        "complexity": "medium",
+        "prerequisites": [
+            "Docker knowledge",
+            "Cloud platform experience",
+            "Git version control",
+            "Basic scripting skills"
+        ],
+        "related_templates": [
+            "data-scientist",
+            "security-specialist",
+            "solutions-architect"
+        ]
+    },
+    // CONTEXT PATHS SECTION
+    // ============================================================================
+    // Contexts specifically chosen for DevOps workflows:
+    // - Infrastructure as Code best practices
+    // - CI/CD pipeline design and implementation
+    // - Monitoring and observability strategies
+    // - Cloud platform best practices
+    // - Security and compliance in DevOps
+    // ============================================================================
+    "paths": [
+        // Core DevOps methodologies - comprehensive infrastructure and deployment practices
+        "examples/contexts/domains/devops-methodologies.md",
+        // AWS best practices - for cloud infrastructure management
+        "contexts/aws-best-practices.md",
+        // Development guidelines - coding standards for infrastructure code
+        "contexts/development-guidelines.md",
+        // Project delivery context - for managing DevOps projects and releases
+        "contexts/project-delivery.md",
+        // Project README - provides context about the current project
+        "README.md",
+        // Contributing guidelines - for collaborative infrastructure projects
+        "?CONTRIBUTING.md",
+        // Documentation in docs folder - project-specific documentation
+        "?docs/**/*.md",
+        // Infrastructure code - Terraform, CloudFormation, etc.
+        "?infrastructure/**/*.md",
+        "?terraform/**/*.md",
+        "?cloudformation/**/*.md",
+        // Kubernetes manifests and documentation
+        "?k8s/**/*.md",
+        "?kubernetes/**/*.md",
+        // CI/CD pipeline documentation
+        "?.github/**/*.md",
+        "?.gitlab-ci.yml",
+        "?Jenkinsfile",
+        // Docker and containerization docs
+        "?docker/**/*.md",
+        "?Dockerfile*",
+        // Ansible playbooks and documentation
+        "?ansible/**/*.md",
+        "?playbooks/**/*.md"
+    ],
+    // HOOKS SECTION
+    // ============================================================================
+    // Automation hooks useful for DevOps engineers:
+    // - Infrastructure validation and testing
+    // - CI/CD pipeline monitoring
+    // - Security scanning and compliance checks
+    // - Performance monitoring and alerting
+    // - Automated documentation generation
+    // ============================================================================
+    "hooks": {
+        // Infrastructure validation - runs when infrastructure code changes
+        "infrastructure-validation": {
+            "enabled": false, // Enable when you have the hook script available
+            "description": "Validate infrastructure code and run security scans",
+            "trigger": "on_file_save",
+            "config": {
+                "file_patterns": [
+                    "terraform/**/*.tf",
+                    "cloudformation/**/*.yaml",
+                    "cloudformation/**/*.json",
+                    "k8s/**/*.yaml",
+                    "kubernetes/**/*.yaml",
+                    "ansible/**/*.yml"
+                ],
+                "validation_tools": [
+                    "terraform_validate",
+                    "tflint",
+                    "checkov",
+                    "kube-score",
+                    "ansible-lint"
+                ],
+                "security_scans": [
+                    "tfsec",
+                    "kube-bench",
+                    "trivy"
+                ],
+                "report_output": "reports/infrastructure/",
+                "fail_on_errors": true
+            }
+        },
+        // CI/CD pipeline monitor - tracks pipeline performance and failures
+        "cicd-monitor": {
+            "enabled": false, // Enable when you have the hook script available
+            "description": "Monitor CI/CD pipeline performance and send alerts",
+            "trigger": "on_pipeline_event",
+            "config": {
+                "pipeline_platforms": [
+                    "github_actions",
+                    "gitlab_ci",
+                    "jenkins",
+                    "azure_devops"
+                ],
+                "metrics_to_track": [
+                    "build_duration",
+                    "success_rate",
+                    "deployment_frequency",
+                    "lead_time",
+                    "mttr"
+                ],
+                "alert_channels": [
+                    "slack",
+                    "email",
+                    "pagerduty"
+                ],
+                "dashboard_url": "https://grafana.example.com/devops",
+                "retention_days": 90
+            }
+        },
+        // Container security scanner - scans Docker images and containers
+        "container-security": {
+            "enabled": false, // Enable when you have the hook script available
+            "description": "Scan container images for vulnerabilities and compliance",
+            "trigger": "on_image_build",
+            "config": {
+                "image_patterns": [
+                    "Dockerfile*",
+                    "docker-compose*.yml"
+                ],
+                "scanning_tools": [
+                    "trivy",
+                    "clair",
+                    "anchore",
+                    "snyk"
+                ],
+                "vulnerability_thresholds": {
+                    "critical": 0,
+                    "high": 5,
+                    "medium": 20
+                },
+                "compliance_checks": [
+                    "cis_docker_benchmark",
+                    "nist_guidelines"
+                ],
+                "report_output": "reports/container_security/"
+            }
+        },
+        // Infrastructure monitoring - sets up monitoring and alerting
+        "infrastructure-monitoring": {
+            "enabled": false, // Enable when you have the hook script available
+            "description": "Configure monitoring and alerting for infrastructure",
+            "trigger": "on_deployment",
+            "config": {
+                "monitoring_stack": "prometheus", // or "datadog", "newrelic"
+                "metrics_to_monitor": [
+                    "cpu_usage",
+                    "memory_usage",
+                    "disk_usage",
+                    "network_io",
+                    "application_metrics"
+                ],
+                "alert_rules": [
+                    "high_cpu_usage",
+                    "low_disk_space",
+                    "service_down",
+                    "high_error_rate"
+                ],
+                "notification_channels": [
+                    "slack",
+                    "pagerduty",
+                    "email"
+                ],
+                "dashboard_templates": "monitoring/dashboards/"
+            }
+        },
+        // Deployment automation - handles automated deployments
+        "deployment-automation": {
+            "enabled": false, // Enable when you have the hook script available
+            "description": "Automate deployment processes with rollback capabilities",
+            "trigger": "on_merge_to_main",
+            "config": {
+                "deployment_strategy": "blue_green", // or "canary", "rolling"
+                "environments": [
+                    "staging",
+                    "production"
+                ],
+                "approval_required": {
+                    "staging": false,
+                    "production": true
+                },
+                "health_checks": [
+                    "http_endpoint",
+                    "database_connection",
+                    "external_services"
+                ],
+                "rollback_triggers": [
+                    "health_check_failure",
+                    "error_rate_threshold",
+                    "manual_trigger"
+                ],
+                "notification_channels": [
+                    "slack",
+                    "email"
+                ]
+            }
+        },
+        // Documentation generator for infrastructure
+        "infra-documentation": {
+            "enabled": false, // Enable when you have the hook script available
+            "description": "Generate documentation for infrastructure and deployments",
+            "trigger": "on_commit",
+            "config": {
+                "source_patterns": [
+                    "terraform/**/*.tf",
+                    "k8s/**/*.yaml",
+                    "ansible/**/*.yml",
+                    "docker/**/*"
+                ],
+                "output_format": "markdown",
+                "output_directory": "docs/infrastructure/",
+                "include_sections": [
+                    "architecture_diagrams",
+                    "resource_inventory",
+                    "deployment_procedures",
+                    "troubleshooting_guides"
+                ],
+                "auto_generate": [
+                    "terraform_docs",
+                    "kubernetes_manifests",
+                    "network_diagrams"
+                ]
+            }
+        }
+    },
+    // SETTINGS SECTION
+    // ============================================================================
+    // Settings optimized for DevOps workflows
+    // ============================================================================
+    "settings": {
+        // Auto-reload contexts when files change (useful during infrastructure changes)
+        "auto_reload": true,
+        // Higher limit for contexts since DevOps engineers reference many resources
+        "max_contexts": 100,
+        // Validate contexts to catch broken references
+        "validate_contexts": true,
+        // Info level logging for deployment feedback
+        "log_level": "info",
+        // DevOps specific settings
+        "devops_settings": {
+            // Default cloud provider
+            "cloud_provider": "aws", // or "gcp", "azure", "multi-cloud"
+            // Default region for deployments
+            "default_region": "us-west-2",
+            // Container registry to use
+            "container_registry": "ecr", // or "gcr", "acr", "dockerhub"
+            // Default Kubernetes namespace
+            "k8s_namespace": "default",
+            // Terraform backend configuration
+            "terraform_backend": "s3", // or "gcs", "azurerm", "local"
+            // Default environment for development
+            "default_environment": "development",
+            // Monitoring and alerting preferences
+            "monitoring_enabled": true,
+            "alert_severity_threshold": "warning",
+            // Security scanning preferences
+            "security_scanning_enabled": true,
+            "vulnerability_threshold": "medium",
+            // Backup and disaster recovery
+            "backup_enabled": true,
+            "backup_retention_days": 30
+        }
+    }
+    // ============================================================================
+    // DEVOPS ENGINEER CUSTOMIZATION NOTES
+    // ============================================================================
+    // To customize this profile for your specific DevOps needs:
+    // 
+    // 1. CLOUD PLATFORM FOCUS:
+    //    - For AWS: Add "contexts/aws-advanced-practices.md"
+    //    - For Google Cloud: Add "contexts/gcp-best-practices.md"
+    //    - For Azure: Add "contexts/azure-devops-practices.md"
+    //    - For Multi-cloud: Add "contexts/multi-cloud-strategies.md"
+    // 
+    // 2. SPECIALIZATION AREAS:
+    //    - For Kubernetes: Add "contexts/k8s-advanced-patterns.md"
+    //    - For Terraform: Add "contexts/terraform-best-practices.md"
+    //    - For Monitoring: Add "contexts/observability-practices.md"
+    //    - For Security: Add "contexts/devsecops-practices.md"
+    // 
+    // 3. TEAM COLLABORATION:
+    //    - Add team infrastructure standards to paths
+    //    - Enable CI/CD monitoring hooks
+    //    - Include infrastructure review workflows
+    //    - Add incident response procedures
+    // 
+    // 4. COMPLIANCE & GOVERNANCE:
+    //    - Enable security scanning in all hooks
+    //    - Add compliance frameworks contexts
+    //    - Include audit logging requirements
+    //    - Add cost optimization guidelines
+    // 
+    // Example customizations:
+    // 
+    // For Kubernetes Specialists:
+    // "paths": [
+    //   "examples/contexts/domains/devops-methodologies.md",
+    //   "contexts/kubernetes-advanced-patterns.md",
+    //   "contexts/helm-best-practices.md",
+    //   "contexts/service-mesh-practices.md"
+    // ]
+    // 
+    // For Security-Focused DevOps:
+    // "paths": [
+    //   "examples/contexts/domains/devops-methodologies.md",
+    //   "contexts/devsecops-practices.md",
+    //   "contexts/security-automation.md",
+    //   "contexts/compliance-frameworks.md"
+    // ]
+    // 
+    // For Site Reliability Engineering:
+    // "hooks": {
+    //   "infrastructure-monitoring": { "enabled": true },
+    //   "cicd-monitor": { "enabled": true },
+    //   "deployment-automation": { "enabled": true },
+    //   "incident-response": { "enabled": true }
+    // }
+    // 
+    // For Platform Engineering:
+    // "paths": [
+    //   "examples/contexts/domains/devops-methodologies.md",
+    //   "contexts/platform-engineering.md",
+    //   "contexts/developer-experience.md",
+    //   "contexts/internal-tooling.md"
+    // ]
+    // ============================================================================
+}

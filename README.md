@@ -21,9 +21,9 @@ Simplify the setup and sharing of Amazon Q CLI configurations across teams and e
 ### Quick Install
 
 ```bash
-# Using uvx (recommended)
+# Using uv (recommended)
 pip install uv
-uvx install --from . ai-configurator
+uv tool install --from . ai-configurator
 
 # Using pip
 pip install -e .
@@ -111,10 +111,10 @@ For complete development setup, package configuration, and contribution guidelin
 
 - [Installation Guide](docs/installation.md)
 - [Development Setup](docs/development/setup.md)
+- [Custom Hooks Guide](docs/hooks.md)
 - Configuration Guide (coming soon)
 - Profile Management (coming soon)
 - MCP Server Setup (coming soon)
-- Custom Hooks (coming soon)
 - Troubleshooting (coming soon)
 
 ## 🤝 Contributing

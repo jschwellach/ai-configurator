@@ -3,8 +3,8 @@ title: "Custom Hook Development Guide"
 description: "Complete guide to developing and managing custom hooks in AI Configurator"
 category: "user"
 tags: ["hooks", "development", "automation", "customization"]
-version: "1.0"
-last_updated: "2025-01-31"
+version: "1.1"
+last_updated: "2025-07-31"
 related_docs:
   - "docs/configuration.md"
   - "docs/profiles.md"
@@ -13,19 +13,18 @@ related_docs:
 
 # Custom Hook Development Guide
 
-Hooks in AI Configurator allow you to extend functionality by executing custom code at specific trigger points. This guide covers everything you need to know about creating, configuring, and managing hooks.
+Hooks in AI Configurator allow you to extend functionality by executing custom scripts at specific trigger points. This guide covers everything you need to know about creating, configuring, and managing hooks.
 
 ## What are Hooks?
 
-Hooks are automated scripts or context providers that execute at specific trigger points:
+Hooks are automated scripts that execute at specific trigger points in your AI Configurator workflow. The current implementation supports two main types of hooks:
 
-- **Context Hooks**: Provide additional context to the AI
-- **Script Hooks**: Execute commands or scripts
-- **Hybrid Hooks**: Combine context and script functionality
+- **Python Hooks**: Python scripts that can perform complex operations, data processing, and integrations
+- **Shell Hooks**: Bash/shell scripts for system operations, file processing, and command execution
 
 ### Hook Triggers
 
-Hooks can be triggered at various points:
+Hooks can be triggered at various points (implementation varies by hook type):
 
 | Trigger            | Description                | Use Cases                                 |
 | ------------------ | -------------------------- | ----------------------------------------- |
@@ -35,490 +34,429 @@ Hooks can be triggered at various points:
 | `on_project_open`  | When opening a project     | Project-specific setup, dependency checks |
 | `on_error`         | When errors occur          | Error logging, recovery actions           |
 
-## Hook Types
-
-### Context Hooks
-
-Provide additional context information to the AI:
-
-```yaml
-name: "project-context"
-description: "Load project-specific context information"
-type: "context"
-trigger: "on_session_start"
-enabled: true
-
-context:
-  sources:
-    - "hooks/project-context.md"
-    - "README.md"
-    - "package.json"
-  tags: ["project", "setup"]
-  categories: ["development"]
-  priority: 5
-
-conditions:
-  - file_exists: "package.json"
-```
-
-### Script Hooks
-
-Execute commands or scripts:
-
-```yaml
-name: "setup-dev-env"
-description: "Set up development environment"
-type: "script"
-trigger: "on_session_start"
-enabled: true
-
-script:
-  command: "python"
-  args: ["scripts/setup-dev.py"]
-  working_dir: "."
-  timeout: 60
-  env:
-    DEBUG: "true"
-    PROJECT_ROOT: "${PWD}"
-
-conditions:
-  - platform: ["linux", "macos"]
-    environment:
-      NODE_ENV: "development"
-```
-
-### Hybrid Hooks
-
-Combine context and script functionality:
-
-```yaml
-name: "enhanced-context"
-description: "Load context and process it with script"
-type: "hybrid"
-trigger: "per_user_message"
-enabled: true
-
-context:
-  sources:
-    - "contexts/dynamic-context.md"
-  priority: 10
-
-script:
-  command: "python"
-  args: ["scripts/process-context.py"]
-  timeout: 30
-
-conditions:
-  - environment:
-      ENHANCED_MODE: "true"
-```
-
-## Hook Configuration Structure
-
-### Complete Hook Example
-
-```yaml
-# Hook identification
-name: "comprehensive-hook"
-description: "Example of a comprehensive hook configuration"
-version: "1.2"
-type: "hybrid"
-trigger: "on_session_start"
-enabled: true
-timeout: 45
-
-# Context configuration (for context and hybrid hooks)
-context:
-  sources:
-    - "hooks/comprehensive-hook.md"
-    - "contexts/shared-context.md"
-    - "project-docs/*.md"
-
-  # Context processing options
-  tags: ["comprehensive", "example"]
-  categories: ["development", "automation"]
-  priority: 10
-
-  # Advanced context options
-  processing:
-    enable_templates: true
-    variable_substitution: true
-    markdown_extensions: ["tables", "fenced_code"]
-
-# Script configuration (for script and hybrid hooks)
-script:
-  command: "python"
-  args: ["scripts/comprehensive-script.py", "--mode", "full"]
-  working_dir: "."
-  timeout: 60
-
-  # Environment variables
-  env:
-    HOOK_NAME: "comprehensive-hook"
-    DEBUG_MODE: "true"
-    PROJECT_ROOT: "${PWD}"
-    CONFIG_PATH: "${AMAZONQ_CONFIG_DIR}"
-
-# Execution conditions
-conditions:
-  - platform: ["linux", "macos"]
-    environment:
-      NODE_ENV: "development"
-      COMPREHENSIVE_MODE: "enabled"
-    file_exists: "package.json"
-
-  - platform: ["windows"]
-    environment:
-      DEVELOPMENT: "true"
-    file_exists: "requirements.txt"
-
-# Hook metadata
-metadata:
-  author: "development-team"
-  created_date: "2025-01-31"
-  tags: ["automation", "development"]
-  documentation: "docs/hooks/comprehensive-hook.md"
-
-  # Version history
-  version_history:
-    - version: "1.0"
-      date: "2025-01-15"
-      changes: "Initial implementation"
-    - version: "1.1"
-      date: "2025-01-25"
-      changes: "Added Windows support"
-    - version: "1.2"
-      date: "2025-01-31"
-      changes: "Enhanced context processing"
-```
-
 ## Creating Hooks
 
 ### Using AI Configurator CLI
 
-Create hook templates:
+The easiest way to create hooks is using the built-in CLI commands:
 
 ```bash
-# Create basic context hook
-ai-config hooks create my-context-hook --type context
+# Create a Python hook (default)
+ai-config hooks create my-python-hook
 
-# Create script hook with specific trigger
-ai-config hooks create my-script-hook --type script --trigger on_file_change
+# Create a Python hook explicitly
+ai-config hooks create my-python-hook --type python
 
-# Create hybrid hook
-ai-config hooks create my-hybrid-hook --type hybrid --trigger per_user_message
+# Create a shell script hook
+ai-config hooks create my-shell-hook --type shell
 ```
 
-### Manual Hook Creation
+This will create template files in your hooks directory (`~/.aws/amazonq/hooks/`) with helpful boilerplate code.
 
-1. **Create hook directory structure:**
+### Python Hook Template
 
-```bash
-mkdir -p ~/.amazonq/hooks
-cd ~/.amazonq/hooks
-```
-
-2. **Create YAML configuration:**
-
-```bash
-# Create hook configuration
-nano my-hook.yaml
-```
-
-3. **Create companion files:**
-
-```bash
-# For context hooks, create markdown file
-nano my-hook.md
-
-# For script hooks, create script file
-mkdir -p scripts
-nano scripts/my-hook.py
-```
-
-## Hook Development Examples
-
-### Context Hook Example
-
-**Configuration (`project-analyzer.yaml`):**
-
-```yaml
-name: "project-analyzer"
-description: "Analyze project structure and provide context"
-type: "context"
-trigger: "on_session_start"
-enabled: true
-
-context:
-  sources:
-    - "hooks/project-analyzer.md"
-  priority: 8
-
-conditions:
-  - file_exists: "package.json"
-```
-
-**Context File (`project-analyzer.md`):**
-
-```markdown
----
-title: "Project Analysis Context"
-tags: ["project", "analysis"]
-priority: 8
----
-
-# Project Analysis
-
-## Project Structure
-
-This project appears to be a Node.js application based on the presence of package.json.
-
-## Key Files
-
-- package.json: Contains project dependencies and scripts
-- README.md: Project documentation
-- src/: Source code directory
-
-## Development Guidelines
-
-- Follow the coding standards defined in .eslintrc.js
-- Run tests before committing: `npm test`
-- Use semantic versioning for releases
-
-## Common Tasks
-
-- Start development server: `npm run dev`
-- Build for production: `npm run build`
-- Run tests: `npm test`
-- Lint code: `npm run lint`
-```
-
-### Script Hook Example
-
-**Configuration (`auto-formatter.yaml`):**
-
-```yaml
-name: "auto-formatter"
-description: "Automatically format code files on change"
-type: "script"
-trigger: "on_file_change"
-enabled: true
-
-script:
-  command: "python"
-  args: ["scripts/auto-formatter.py"]
-  timeout: 30
-  env:
-    FORMATTER_CONFIG: "configs/formatter.json"
-
-conditions:
-  - file_exists: ".prettierrc"
-```
-
-**Script File (`scripts/auto-formatter.py`):**
+When you create a Python hook, you get a template like this:
 
 ```python
 #!/usr/bin/env python3
-"""Auto-formatter hook script."""
+"""
+my-python-hook Hook Script
 
-import os
+This is an auto-generated hook template.
+Customize this script to perform your desired actions.
+"""
+
 import sys
-import subprocess
-import json
+import os
 from pathlib import Path
 
 def main():
-    """Main formatter function."""
-    # Get environment variables
-    config_path = os.environ.get('FORMATTER_CONFIG', 'configs/formatter.json')
-    changed_file = os.environ.get('CHANGED_FILE', '')
-
-    if not changed_file:
-        print("No file specified for formatting")
-        return 0
-
-    # Load formatter configuration
-    try:
-        with open(config_path, 'r') as f:
-            config = json.load(f)
-    except FileNotFoundError:
-        config = {"formats": ["js", "ts", "py", "yaml"]}
-
-    # Check if file should be formatted
-    file_path = Path(changed_file)
-    if file_path.suffix[1:] not in config.get("formats", []):
-        print(f"Skipping {changed_file} - not in format list")
-        return 0
-
-    # Format the file
-    try:
-        if file_path.suffix in ['.js', '.ts']:
-            subprocess.run(['prettier', '--write', changed_file], check=True)
-        elif file_path.suffix == '.py':
-            subprocess.run(['black', changed_file], check=True)
-        elif file_path.suffix in ['.yaml', '.yml']:
-            subprocess.run(['yamlfmt', '-w', changed_file], check=True)
-
-        print(f"Formatted {changed_file}")
-        return 0
-
-    except subprocess.CalledProcessError as e:
-        print(f"Error formatting {changed_file}: {e}")
-        return 1
-    except FileNotFoundError as e:
-        print(f"Formatter not found: {e}")
-        return 1
-
-if __name__ == "__main__":
-    sys.exit(main())
-```
-
-### Hybrid Hook Example
-
-**Configuration (`intelligent-context.yaml`):**
-
-```yaml
-name: "intelligent-context"
-description: "Dynamically generate context based on user message"
-type: "hybrid"
-trigger: "per_user_message"
-enabled: true
-
-context:
-  sources:
-    - "hooks/intelligent-context.md"
-  priority: 15
-
-script:
-  command: "python"
-  args: ["scripts/intelligent-context.py"]
-  timeout: 20
-  env:
-    CONTEXT_DB: "data/context.db"
-    AI_MODEL: "gpt-4"
-
-conditions:
-  - environment:
-      INTELLIGENT_MODE: "enabled"
-```
-
-**Context File (`intelligent-context.md`):**
-
-```markdown
----
-title: "Intelligent Context"
-dynamic: true
----
-
-# Intelligent Context System
-
-This context is dynamically generated based on the user's message and project state.
-
-## Context Generation
-
-The system analyzes:
-
-- User message intent
-- Current project files
-- Recent changes
-- Development patterns
-
-## Available Context Types
-
-- Code analysis
-- Documentation references
-- Best practices
-- Error solutions
-```
-
-**Script File (`scripts/intelligent-context.py`):**
-
-```python
-#!/usr/bin/env python3
-"""Intelligent context generation script."""
-
-import os
-import sys
-import json
-import sqlite3
-from pathlib import Path
-
-def analyze_user_message(message):
-    """Analyze user message to determine context needs."""
-    keywords = {
-        'error': ['debugging', 'troubleshooting'],
-        'deploy': ['deployment', 'production'],
-        'test': ['testing', 'quality'],
-        'security': ['security', 'authentication'],
-        'performance': ['optimization', 'monitoring']
-    }
-
-    message_lower = message.lower()
-    relevant_contexts = []
-
-    for keyword, contexts in keywords.items():
-        if keyword in message_lower:
-            relevant_contexts.extend(contexts)
-
-    return relevant_contexts
-
-def load_project_context():
-    """Load relevant project context."""
-    project_info = {}
-
-    # Check for common project files
-    if Path('package.json').exists():
-        project_info['type'] = 'nodejs'
-        with open('package.json', 'r') as f:
-            package_data = json.load(f)
-            project_info['dependencies'] = list(package_data.get('dependencies', {}).keys())
-
-    if Path('requirements.txt').exists():
-        project_info['type'] = 'python'
-        with open('requirements.txt', 'r') as f:
-            project_info['dependencies'] = [line.strip() for line in f if line.strip()]
-
-    return project_info
-
-def generate_context(user_message, project_info):
-    """Generate intelligent context based on analysis."""
-    context_parts = []
-
-    # Add message-specific context
-    relevant_contexts = analyze_user_message(user_message)
-    if relevant_contexts:
-        context_parts.append(f"## Relevant Context Areas\n{', '.join(relevant_contexts)}")
-
-    # Add project-specific context
-    if project_info.get('type'):
-        context_parts.append(f"## Project Type\n{project_info['type']}")
-
-    if project_info.get('dependencies'):
-        deps = ', '.join(project_info['dependencies'][:5])  # Limit to first 5
-        context_parts.append(f"## Key Dependencies\n{deps}")
-
-    return '\n\n'.join(context_parts)
-
-def main():
-    """Main function."""
-    # Get user message from environment
-    user_message = os.environ.get('USER_MESSAGE', '')
-    if not user_message:
-        print("No user message provided")
-        return 0
-
-    # Analyze project and generate context
-    project_info = load_project_context()
-    context = generate_context(user_message, project_info)
-
-    # Output generated context
-    print("Generated Context:")
-    print(context)
-
+    """Main hook function."""
+    print(f"Executing my-python-hook hook...")
+    
+    # Access environment variables
+    config_dir = os.getenv("AMAZONQ_CONFIG_DIR", "")
+    hooks_dir = os.getenv("AI_CONFIGURATOR_HOOKS_DIR", "")
+    hook_name = os.getenv("HOOK_NAME", "my-python-hook")
+    
+    print(f"Config directory: {config_dir}")
+    print(f"Hooks directory: {hooks_dir}")
+    print(f"Hook name: {hook_name}")
+    
+    # Add your custom logic here
+    # Example: Read configuration files, process data, etc.
+    
+    # Return success
     return 0
 
 if __name__ == "__main__":
     sys.exit(main())
+```
+
+### Shell Hook Template
+
+When you create a shell hook, you get a template like this:
+
+```bash
+#!/bin/bash
+#
+# my-shell-hook Hook Script
+#
+# This is an auto-generated hook template.
+# Customize this script to perform your desired actions.
+#
+
+set -e  # Exit on error
+
+echo "Executing my-shell-hook hook..."
+
+# Access environment variables
+echo "Config directory: $AMAZONQ_CONFIG_DIR"
+echo "Hooks directory: $AI_CONFIGURATOR_HOOKS_DIR"
+echo "Hook name: $HOOK_NAME"
+
+# Add your custom logic here
+# Example: Process files, run commands, etc.
+
+echo "my-shell-hook hook completed successfully"
+exit 0
+```
+
+### Available Environment Variables
+
+All hooks have access to these environment variables:
+
+- `AMAZONQ_CONFIG_DIR`: Path to the Amazon Q configuration directory
+- `AI_CONFIGURATOR_HOOKS_DIR`: Path to the hooks directory
+- `HOOK_NAME`: Name of the current hook being executed
+
+## Practical Hook Examples
+
+### Example 1: Project Information Hook
+
+Create a Python hook that gathers project information:
+
+```bash
+ai-config hooks create project-info --type python
+```
+
+Edit the generated `project-info.py`:
+
+```python
+#!/usr/bin/env python3
+"""
+Project Information Hook
+
+Gathers and displays project information for AI context.
+"""
+
+import sys
+import os
+import json
+from pathlib import Path
+
+def get_project_type():
+    """Determine project type based on files present."""
+    if Path('package.json').exists():
+        return 'nodejs'
+    elif Path('requirements.txt').exists() or Path('pyproject.toml').exists():
+        return 'python'
+    elif Path('Cargo.toml').exists():
+        return 'rust'
+    elif Path('go.mod').exists():
+        return 'go'
+    elif Path('pom.xml').exists():
+        return 'java'
+    else:
+        return 'unknown'
+
+def get_dependencies():
+    """Get project dependencies."""
+    project_type = get_project_type()
+    
+    if project_type == 'nodejs' and Path('package.json').exists():
+        with open('package.json', 'r') as f:
+            data = json.load(f)
+            deps = list(data.get('dependencies', {}).keys())
+            dev_deps = list(data.get('devDependencies', {}).keys())
+            return {'dependencies': deps, 'devDependencies': dev_deps}
+    
+    elif project_type == 'python' and Path('requirements.txt').exists():
+        with open('requirements.txt', 'r') as f:
+            deps = [line.strip().split('==')[0] for line in f if line.strip() and not line.startswith('#')]
+            return {'dependencies': deps}
+    
+    return {}
+
+def main():
+    """Main hook function."""
+    print("=== Project Information ===")
+    
+    # Basic project info
+    project_type = get_project_type()
+    print(f"Project Type: {project_type}")
+    
+    # Get current directory
+    current_dir = Path.cwd()
+    print(f"Project Directory: {current_dir}")
+    
+    # Get dependencies
+    deps = get_dependencies()
+    if deps:
+        print("Dependencies:")
+        for dep_type, dep_list in deps.items():
+            print(f"  {dep_type}: {', '.join(dep_list[:5])}")  # Show first 5
+            if len(dep_list) > 5:
+                print(f"    ... and {len(dep_list) - 5} more")
+    
+    # Check for common files
+    common_files = ['README.md', 'LICENSE', '.gitignore', 'Dockerfile']
+    present_files = [f for f in common_files if Path(f).exists()]
+    if present_files:
+        print(f"Common files present: {', '.join(present_files)}")
+    
+    return 0
+
+if __name__ == "__main__":
+    sys.exit(main())
+```
+
+### Example 2: Git Status Hook
+
+Create a shell hook that shows git status:
+
+```bash
+ai-config hooks create git-status --type shell
+```
+
+Edit the generated `git-status.sh`:
+
+```bash
+#!/bin/bash
+#
+# Git Status Hook
+#
+# Shows current git repository status
+#
+
+set -e
+
+echo "=== Git Repository Status ==="
+
+# Check if we're in a git repository
+if ! git rev-parse --git-dir > /dev/null 2>&1; then
+    echo "Not in a git repository"
+    exit 0
+fi
+
+# Show current branch
+current_branch=$(git branch --show-current)
+echo "Current branch: $current_branch"
+
+# Show status
+echo ""
+echo "Repository status:"
+git status --porcelain | head -10
+
+# Show recent commits
+echo ""
+echo "Recent commits:"
+git log --oneline -5
+
+# Show remote info
+echo ""
+echo "Remote information:"
+git remote -v
+
+echo "Git status check completed"
+exit 0
+```
+
+### Example 3: Environment Setup Hook
+
+Create a Python hook for environment setup:
+
+```bash
+ai-config hooks create env-setup --type python
+```
+
+Edit the generated `env-setup.py`:
+
+```python
+#!/usr/bin/env python3
+"""
+Environment Setup Hook
+
+Sets up development environment and checks prerequisites.
+"""
+
+import sys
+import os
+import subprocess
+import shutil
+from pathlib import Path
+
+def check_command(command):
+    """Check if a command is available."""
+    return shutil.which(command) is not None
+
+def check_prerequisites():
+    """Check for required tools."""
+    tools = {
+        'git': 'Git version control',
+        'node': 'Node.js runtime',
+        'npm': 'Node package manager',
+        'python': 'Python interpreter',
+        'pip': 'Python package manager'
+    }
+    
+    print("Checking prerequisites...")
+    missing = []
+    
+    for tool, description in tools.items():
+        if check_command(tool):
+            try:
+                result = subprocess.run([tool, '--version'], 
+                                      capture_output=True, text=True, timeout=5)
+                version = result.stdout.strip().split('\n')[0]
+                print(f"  ✓ {tool}: {version}")
+            except:
+                print(f"  ✓ {tool}: Available")
+        else:
+            print(f"  ✗ {tool}: Not found ({description})")
+            missing.append(tool)
+    
+    return missing
+
+def setup_git_hooks():
+    """Set up git hooks if in a git repository."""
+    if not Path('.git').exists():
+        return
+    
+    hooks_dir = Path('.git/hooks')
+    if not hooks_dir.exists():
+        return
+    
+    # Example: Create a simple pre-commit hook
+    pre_commit = hooks_dir / 'pre-commit'
+    if not pre_commit.exists():
+        pre_commit.write_text('''#!/bin/bash
+# Simple pre-commit hook
+echo "Running pre-commit checks..."
+
+# Check for Python syntax errors
+if command -v python3 &> /dev/null; then
+    find . -name "*.py" -exec python3 -m py_compile {} \;
+fi
+
+echo "Pre-commit checks passed"
+''')
+        pre_commit.chmod(0o755)
+        print("  ✓ Created git pre-commit hook")
+
+def main():
+    """Main hook function."""
+    print("=== Environment Setup ===")
+    
+    # Check prerequisites
+    missing = check_prerequisites()
+    
+    if missing:
+        print(f"\nMissing tools: {', '.join(missing)}")
+        print("Please install missing tools before proceeding.")
+        return 1
+    
+    # Setup git hooks
+    print("\nSetting up git hooks...")
+    setup_git_hooks()
+    
+    # Environment variables
+    config_dir = os.getenv("AMAZONQ_CONFIG_DIR", "")
+    if config_dir:
+        print(f"\nAmazon Q Config Directory: {config_dir}")
+    
+    print("\nEnvironment setup completed successfully!")
+    return 0
+
+if __name__ == "__main__":
+    sys.exit(main())
+```
+
+### Example 4: Code Quality Check Hook
+
+Create a shell hook for code quality checks:
+
+```bash
+ai-config hooks create code-quality --type shell
+```
+
+Edit the generated `code-quality.sh`:
+
+```bash
+#!/bin/bash
+#
+# Code Quality Check Hook
+#
+# Runs various code quality checks
+#
+
+set -e
+
+echo "=== Code Quality Checks ==="
+
+# Function to check if command exists
+command_exists() {
+    command -v "$1" >/dev/null 2>&1
+}
+
+# Python checks
+if find . -name "*.py" -type f | head -1 | grep -q .; then
+    echo "Found Python files, running Python checks..."
+    
+    if command_exists flake8; then
+        echo "Running flake8..."
+        flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics || true
+    fi
+    
+    if command_exists black; then
+        echo "Checking black formatting..."
+        black --check . || echo "Consider running: black ."
+    fi
+    
+    if command_exists mypy; then
+        echo "Running mypy type checking..."
+        mypy . || true
+    fi
+fi
+
+# JavaScript/TypeScript checks
+if find . -name "*.js" -o -name "*.ts" -type f | head -1 | grep -q .; then
+    echo "Found JavaScript/TypeScript files, running JS checks..."
+    
+    if command_exists eslint; then
+        echo "Running ESLint..."
+        eslint . || true
+    fi
+    
+    if command_exists prettier; then
+        echo "Checking Prettier formatting..."
+        prettier --check . || echo "Consider running: prettier --write ."
+    fi
+fi
+
+# General checks
+echo "Running general checks..."
+
+# Check for TODO/FIXME comments
+echo "Checking for TODO/FIXME comments:"
+grep -r "TODO\|FIXME" --include="*.py" --include="*.js" --include="*.ts" . | head -5 || echo "No TODO/FIXME found"
+
+# Check file permissions
+echo "Checking for executable files:"
+find . -type f -executable -not -path "./.git/*" | head -5
+
+echo "Code quality checks completed"
+exit 0
 ```
 
 ## Hook Management
@@ -530,15 +468,6 @@ View available hooks:
 ```bash
 # List all hooks
 ai-config hooks list
-
-# List hooks by type
-ai-config hooks list --type context
-
-# List hooks by trigger
-ai-config hooks list --trigger on_session_start
-
-# Show detailed hook information
-ai-config hooks info hook-name
 ```
 
 ### Testing Hooks
@@ -547,31 +476,28 @@ Test hook functionality:
 
 ```bash
 # Test specific hook
-ai-config hooks test my-hook
+ai-config hooks test my-hook.py
 
-# Test all hooks for a trigger
-ai-config hooks test --trigger on_session_start
-
-# Test with verbose output
-ai-config hooks test my-hook --verbose
-
-# Dry run (don't execute, just validate)
-ai-config hooks test my-hook --dry-run
+# Test shell hook
+ai-config hooks test my-hook.sh
 ```
 
-### Enabling/Disabling Hooks
+### Running Hooks
 
-Control hook execution:
+Execute hooks manually:
 
 ```bash
-# Disable hook
-ai-config hooks disable my-hook
+# Run a Python hook
+ai-config hooks run my-hook.py
 
-# Enable hook
-ai-config hooks enable my-hook
+# Run a shell hook
+ai-config hooks run my-hook.sh
 
-# Toggle hook state
-ai-config hooks toggle my-hook
+# Run with arguments
+ai-config hooks run my-hook.py --args "arg1 arg2"
+
+# Run with timeout
+ai-config hooks run my-hook.py --timeout 60
 ```
 
 ### Hook Validation
@@ -579,121 +505,26 @@ ai-config hooks toggle my-hook
 Validate hook configurations:
 
 ```bash
-# Validate specific hook
-ai-config hooks validate my-hook
-
 # Validate all hooks
-ai-config hooks validate --all
-
-# Strict validation
-ai-config hooks validate --strict
+ai-config hooks validate
 ```
 
-## Advanced Hook Features
+### Hook Configuration
 
-### Conditional Execution
+View hook configuration:
 
-Control when hooks execute:
-
-```yaml
-conditions:
-  # Platform-specific execution
-  - platform: ["linux", "macos"]
-
-  # Environment variable conditions
-  - environment:
-      NODE_ENV: "development"
-      DEBUG: "true"
-
-  # File existence conditions
-  - file_exists: "package.json"
-
-  # Combined conditions (AND logic within condition)
-  - platform: ["linux"]
-    environment:
-      DEVELOPMENT: "true"
-    file_exists: "Dockerfile"
-
-  # Multiple conditions (OR logic between conditions)
-  - platform: ["windows"]
-  - environment:
-      WINDOWS_MODE: "enabled"
+```bash
+# Show hook configuration
+ai-config hooks config
 ```
 
-### Hook Priorities
+### Context Loading
 
-Control execution order:
+Load context using hooks:
 
-```yaml
-# Higher priority executes first
-context:
-  priority: 10 # Executes before priority 5
-
-# In profile configuration
-hooks:
-  on_session_start:
-    - name: "first-hook"
-      priority: 1
-    - name: "second-hook"
-      priority: 5
-    - name: "third-hook"
-      priority: 10
-```
-
-### Environment Variables
-
-Access system and custom environment variables:
-
-```yaml
-script:
-  env:
-    # System variables
-    PROJECT_ROOT: "${PWD}"
-    CONFIG_DIR: "${AMAZONQ_CONFIG_DIR}"
-    HOME_DIR: "${HOME}"
-
-    # Custom variables
-    HOOK_NAME: "my-hook"
-    DEBUG_MODE: "true"
-    API_ENDPOINT: "https://api.example.com"
-
-    # Conditional variables
-    LOG_LEVEL: "${DEBUG:-INFO}"
-    TIMEOUT: "${HOOK_TIMEOUT:-30}"
-```
-
-### Template Processing
-
-Use templates in context files:
-
-```markdown
----
-title: "Dynamic Context"
-template: true
----
-
-# Project: {{ project_name }}
-
-## Current Environment
-
-- Platform: {{ platform }}
-- User: {{ user }}
-- Date: {{ current_date }}
-
-## Project Information
-
-{% if project_type == "nodejs" %}
-This is a Node.js project with the following dependencies:
-{% for dep in dependencies %}
-
-- {{ dep }}
-  {% endfor %}
-  {% endif %}
-
-## Custom Variables
-
-- Debug Mode: {{ debug_mode | default("false") }}
-- Environment: {{ environment | default("development") }}
+```bash
+# Load context from hook
+ai-config hooks context my-context
 ```
 
 ## Hook Best Practices
@@ -702,16 +533,118 @@ This is a Node.js project with the following dependencies:
 
 1. **Keep hooks focused**: Each hook should have a single, clear purpose
 2. **Handle errors gracefully**: Always include error handling in scripts
-3. **Use appropriate timeouts**: Set reasonable timeout values
-4. **Test thoroughly**: Test hooks in different environments
-5. **Document behavior**: Include clear descriptions and examples
+3. **Use appropriate exit codes**: Return 0 for success, non-zero for failure
+4. **Test thoroughly**: Test hooks in different environments and scenarios
+5. **Document behavior**: Include clear descriptions and usage examples
+6. **Make scripts executable**: Ensure shell scripts have proper permissions
+
+### Python Hook Best Practices
+
+```python
+#!/usr/bin/env python3
+"""
+Well-structured hook with proper error handling.
+"""
+
+import sys
+import os
+import logging
+from pathlib import Path
+
+# Set up logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+def main():
+    """Main hook function with error handling."""
+    try:
+        # Your hook logic here
+        logger.info("Hook started successfully")
+        
+        # Access environment variables safely
+        config_dir = os.getenv("AMAZONQ_CONFIG_DIR")
+        if not config_dir:
+            logger.warning("AMAZONQ_CONFIG_DIR not set")
+            return 1
+        
+        # Perform operations
+        result = perform_operations()
+        
+        if result:
+            logger.info("Hook completed successfully")
+            return 0
+        else:
+            logger.error("Hook failed")
+            return 1
+            
+    except Exception as e:
+        logger.error(f"Hook failed with error: {e}")
+        return 1
+
+def perform_operations():
+    """Perform the actual hook operations."""
+    # Your implementation here
+    return True
+
+if __name__ == "__main__":
+    sys.exit(main())
+```
+
+### Shell Hook Best Practices
+
+```bash
+#!/bin/bash
+#
+# Well-structured shell hook with proper error handling
+#
+
+set -e  # Exit on error
+set -u  # Exit on undefined variable
+set -o pipefail  # Exit on pipe failure
+
+# Function for logging
+log() {
+    echo "[$(date +'%Y-%m-%d %H:%M:%S')] $1" >&2
+}
+
+# Function for error handling
+error_exit() {
+    log "ERROR: $1"
+    exit 1
+}
+
+# Main function
+main() {
+    log "Hook started"
+    
+    # Check prerequisites
+    command -v git >/dev/null 2>&1 || error_exit "git not found"
+    
+    # Your hook logic here
+    if perform_operations; then
+        log "Hook completed successfully"
+        exit 0
+    else
+        error_exit "Hook operations failed"
+    fi
+}
+
+perform_operations() {
+    # Your implementation here
+    return 0
+}
+
+# Run main function
+main "$@"
+```
 
 ### Performance Considerations
 
-1. **Optimize execution time**: Keep hook execution fast
+1. **Optimize execution time**: Keep hook execution fast (< 30 seconds for most hooks)
 2. **Cache results**: Cache expensive operations when possible
-3. **Use conditions wisely**: Avoid unnecessary hook executions
-4. **Limit resource usage**: Monitor memory and CPU usage
+3. **Limit resource usage**: Monitor memory and CPU usage
+4. **Use timeouts**: Set reasonable timeout values for external commands
+5. **Avoid blocking operations**: Don't wait indefinitely for external resources
 
 ### Security Best Practices
 
@@ -719,160 +652,212 @@ This is a Node.js project with the following dependencies:
 2. **Use secure paths**: Avoid using user-controlled paths
 3. **Limit permissions**: Run hooks with minimal required permissions
 4. **Sanitize outputs**: Clean sensitive information from outputs
-
-### Maintenance
-
-1. **Version your hooks**: Use semantic versioning
-2. **Track dependencies**: Document external dependencies
-3. **Regular testing**: Test hooks periodically
-4. **Update documentation**: Keep documentation current
+5. **Use subprocess safely**: Use proper subprocess handling in Python
 
 ## Troubleshooting Hooks
 
 ### Common Issues
 
-#### Hook Not Executing
+#### Hook Not Found
 
 **Symptoms:**
-
-- Hook doesn't run at expected trigger
-- No output or logs from hook
-- Hook appears disabled
+- "Hook not found" error when running
+- Hook doesn't appear in `ai-config hooks list`
 
 **Solutions:**
-
 ```bash
-# Check hook status
-ai-config hooks list
+# Check if hook file exists
+ls -la ~/.aws/amazonq/hooks/
 
-# Validate hook configuration
-ai-config hooks validate my-hook
+# Verify file permissions
+ls -la ~/.aws/amazonq/hooks/my-hook.py
 
-# Test hook manually
-ai-config hooks test my-hook
+# Make sure file is executable (for shell scripts)
+chmod +x ~/.aws/amazonq/hooks/my-hook.sh
+```
 
-# Check conditions
-ai-config hooks info my-hook
+#### Permission Denied Errors
+
+**Symptoms:**
+- "Permission denied" when running hook
+- Script fails to execute
+
+**Solutions:**
+```bash
+# Make script executable
+chmod +x ~/.aws/amazonq/hooks/my-hook.sh
+
+# Check file permissions
+ls -la ~/.aws/amazonq/hooks/my-hook.sh
+
+# For Python scripts, ensure Python is executable
+which python3
 ```
 
 #### Script Execution Errors
 
 **Symptoms:**
-
 - Script fails with error codes
-- Permission denied errors
-- Command not found errors
+- Import errors in Python scripts
+- Command not found errors in shell scripts
 
 **Solutions:**
-
 ```bash
-# Check script permissions
-ls -la scripts/my-script.py
-chmod +x scripts/my-script.py
-
 # Test script manually
-python scripts/my-script.py
+python3 ~/.aws/amazonq/hooks/my-hook.py
 
-# Check environment variables
-env | grep HOOK
+# Check Python path and imports
+python3 -c "import sys; print(sys.path)"
+
+# For shell scripts, check command availability
+which command_name
+
+# Test with verbose output
+ai-config hooks test my-hook.py
 ```
 
-#### Context Loading Issues
+#### Environment Variable Issues
 
 **Symptoms:**
-
-- Context files not found
-- Empty context loaded
-- Template processing errors
+- Environment variables not available
+- Unexpected variable values
 
 **Solutions:**
-
 ```bash
-# Check file paths
-ls -la hooks/my-context.md
+# Check available environment variables
+env | grep AMAZONQ
+env | grep AI_CONFIGURATOR
 
-# Validate markdown syntax
-ai-config validate --component contexts
-
-# Test template processing
-ai-config hooks test my-hook --verbose
+# Test hook with debug output
+export DEBUG=true
+ai-config hooks run my-hook.py
 ```
 
 ### Debug Mode
 
-Enable detailed logging:
+Enable detailed logging in your hooks:
 
-```yaml
-script:
-  env:
-    DEBUG: "true"
-    LOG_LEVEL: "DEBUG"
-    HOOK_DEBUG: "true"
+**Python Debug Example:**
+```python
+import os
+import logging
+
+# Enable debug logging if DEBUG environment variable is set
+if os.getenv('DEBUG'):
+    logging.basicConfig(level=logging.DEBUG)
+else:
+    logging.basicConfig(level=logging.INFO)
+
+logger = logging.getLogger(__name__)
+
+def main():
+    logger.debug("Debug mode enabled")
+    logger.info("Hook starting...")
+    # Your code here
 ```
 
+**Shell Debug Example:**
 ```bash
-# Run with debug logging
-export AI_CONFIGURATOR_LOG_LEVEL=DEBUG
-ai-config hooks test my-hook
+#!/bin/bash
+
+# Enable debug mode if DEBUG is set
+if [[ "${DEBUG:-}" == "true" ]]; then
+    set -x  # Print commands as they're executed
+fi
+
+echo "Hook starting..."
+# Your code here
+```
+
+### Testing Hooks
+
+Always test your hooks before deploying:
+
+```bash
+# Test hook execution
+ai-config hooks test my-hook.py
+
+# Test with different environments
+DEBUG=true ai-config hooks test my-hook.py
+
+# Test error conditions
+# (modify your hook to simulate errors)
+
+# Test performance
+time ai-config hooks run my-hook.py
 ```
 
 ### Hook Monitoring
 
-Monitor hook performance:
+Monitor hook performance and execution:
 
 ```bash
-# View hook execution logs
-ai-config logs --component hooks
+# Check hook execution logs (if available)
+tail -f ~/.aws/amazonq/logs/hooks.log
 
-# Monitor hook performance
-ai-config hooks monitor
+# Monitor system resources during hook execution
+top -p $(pgrep -f my-hook.py)
 
-# Get hook statistics
-ai-config hooks stats
+# Time hook execution
+time ai-config hooks run my-hook.py
 ```
 
-## Integration with Profiles
+## Quick Reference
 
-### Profile Hook Configuration
+### CLI Commands
 
-Reference hooks in profiles:
+```bash
+# Create hooks
+ai-config hooks create my-hook --type python    # Create Python hook
+ai-config hooks create my-hook --type shell     # Create shell hook
 
-```yaml
-# In profile configuration
-hooks:
-  on_session_start:
-    - name: "setup-environment"
-      enabled: true
-      config:
-        profile_specific: true
-
-    - name: "load-project-context"
-      enabled: true
-      priority: 5
-
-  per_user_message:
-    - name: "enhance-context"
-      enabled: true
-      config:
-        enhancement_level: "high"
+# Manage hooks
+ai-config hooks list                            # List all hooks
+ai-config hooks test my-hook.py                 # Test a hook
+ai-config hooks run my-hook.py                  # Run a hook
+ai-config hooks validate                        # Validate all hooks
+ai-config hooks config                          # Show hook configuration
+ai-config hooks context my-context              # Load context from hook
 ```
 
-### Profile-Specific Hooks
+### Hook File Locations
 
-Create hooks that adapt to profiles:
+- **Hooks Directory**: `~/.aws/amazonq/hooks/`
+- **Python Hooks**: `~/.aws/amazonq/hooks/hook-name.py`
+- **Shell Hooks**: `~/.aws/amazonq/hooks/hook-name.sh`
 
-```yaml
-# Hook configuration
-name: "profile-aware-hook"
-type: "script"
-trigger: "on_session_start"
+### Environment Variables
 
-script:
-  command: "python"
-  args: ["scripts/profile-aware.py"]
-  env:
-    CURRENT_PROFILE: "${ACTIVE_PROFILE}"
-    PROFILE_CONFIG: "${AMAZONQ_CONFIG_DIR}/profiles/${ACTIVE_PROFILE}.yaml"
+Available in all hooks:
+- `AMAZONQ_CONFIG_DIR`: Amazon Q configuration directory
+- `AI_CONFIGURATOR_HOOKS_DIR`: Hooks directory path
+- `HOOK_NAME`: Current hook name
+
+### Hook Template Structure
+
+**Python Hook:**
+```python
+#!/usr/bin/env python3
+import sys
+import os
+
+def main():
+    # Your hook logic here
+    return 0
+
+if __name__ == "__main__":
+    sys.exit(main())
 ```
 
-This comprehensive guide should help you create powerful, custom hooks to extend AI Configurator's functionality. Remember to test your hooks thoroughly and follow best practices for security and performance.
+**Shell Hook:**
+```bash
+#!/bin/bash
+set -e
+
+echo "Hook starting..."
+# Your hook logic here
+echo "Hook completed"
+exit 0
+```
+
+This updated guide reflects the current implementation of AI Configurator hooks and provides practical examples and troubleshooting advice for the actual CLI commands and functionality.

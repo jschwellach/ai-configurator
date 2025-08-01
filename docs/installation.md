@@ -20,22 +20,22 @@ related_docs:
 
 ## Installation Methods
 
-### Using uvx (Recommended)
+### Using uv (Recommended)
 
-The easiest way to install AI Configurator is using `uvx`, which handles Python dependencies automatically:
+The easiest way to install AI Configurator is using `uv`, which handles Python dependencies automatically:
 
 ```bash
-# Install uvx if you haven't already
+# Install uv if you haven't already
 pip install uv
 
 # Install AI Configurator from source
-uvx install --from . ai-configurator
+uv tool install --from . ai-configurator
 
 # Or install from a git repository
-uvx install --from git+https://github.com/your-org/ai-configurator.git ai-configurator
+uv tool install --from git+https://github.com/your-org/ai-configurator.git ai-configurator
 
 # Run directly without installing
-uvx run --from . uvx_install.py --help
+uv run --from . ai-configurator --help
 ```
 
 ### Using pip
@@ -139,11 +139,11 @@ ai-config status
 ```cmd
 # Using Command Prompt
 pip install uv
-uvx install --from . ai-configurator
+uv tool install --from . ai-configurator
 
 # Using PowerShell
 python -m pip install uv
-uvx install --from . ai-configurator
+uv tool install --from . ai-configurator
 ```
 
 ### macOS
@@ -151,11 +151,11 @@ uvx install --from . ai-configurator
 ```bash
 # Using Homebrew (if available)
 brew install uv
-uvx install --from . ai-configurator
+uv tool install --from . ai-configurator
 
 # Using pip
 pip install uv
-uvx install --from . ai-configurator
+uv tool install --from . ai-configurator
 ```
 
 ### Linux
@@ -164,12 +164,12 @@ uvx install --from . ai-configurator
 # Ubuntu/Debian
 sudo apt update
 python3 -m pip install uv
-uvx install --from . ai-configurator
+uv tool install --from . ai-configurator
 
 # CentOS/RHEL/Fedora
 sudo yum install python3-pip  # or dnf
 python3 -m pip install uv
-uvx install --from . ai-configurator
+uv tool install --from . ai-configurator
 ```
 
 ## Troubleshooting
@@ -195,19 +195,19 @@ pip install -e .
 python -m ai_configurator.cli --help
 ```
 
-### uvx Installation Issues
+### uv Installation Issues
 
-If uvx installation fails:
+If uv installation fails:
 
 ```bash
-# Update uv and uvx
+# Update uv
 pip install --upgrade uv
 
 # Try installing with verbose output
-uvx install --from . ai-configurator --verbose
+uv tool install --from . ai-configurator --verbose
 
-# Clear uvx cache if needed
-uvx cache clear
+# Clear uv cache if needed
+uv cache clean
 ```
 
 ### Permission Issues
@@ -231,7 +231,7 @@ If you have multiple Python versions:
 ```bash
 # Use specific Python version
 python3.8 -m pip install uv
-python3.8 -m uvx install --from . ai-configurator
+python3.8 -m uv tool install --from . ai-configurator
 
 # Or specify Python in virtual environment
 python3.8 -m venv venv
@@ -244,8 +244,8 @@ pip install -e .
 To remove AI Configurator:
 
 ```bash
-# If installed with uvx
-uvx uninstall ai-configurator
+# If installed with uv
+uv tool uninstall ai-configurator
 
 # If installed with pip
 pip uninstall ai-configurator

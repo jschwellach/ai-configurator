@@ -471,6 +471,102 @@ class HookManager(LoggerMixin):
         
         return errors
     
+    def create_script_hook_template(self, hook_name: str, script_type: str = "python") -> bool:
+        """Create a simple script hook template (Python or shell)."""
+        try:
+            # Ensure hooks directory exists
+            self.hooks_dir.mkdir(parents=True, exist_ok=True)
+            
+            if script_type == "python":
+                extension = "py"
+                content = self._generate_python_script_template(hook_name)
+            elif script_type == "shell":
+                extension = "sh"
+                content = self._generate_shell_script_template(hook_name)
+            else:
+                raise ValueError(f"Unsupported script type: {script_type}")
+            
+            # Create script file
+            script_file = self.hooks_dir / f"{hook_name}.{extension}"
+            
+            with open(script_file, 'w', encoding='utf-8') as f:
+                f.write(content)
+            
+            # Make shell scripts executable
+            if script_type == "shell":
+                import stat
+                script_file.chmod(script_file.stat().st_mode | stat.S_IEXEC)
+            
+            self.logger.info(f"Created {script_type} script hook: {hook_name}")
+            return True
+            
+        except Exception as e:
+            self.logger.error(f"Failed to create script hook template: {e}")
+            return False
+    
+    def _generate_python_script_template(self, hook_name: str) -> str:
+        """Generate Python script template content."""
+        return f'''#!/usr/bin/env python3
+"""
+{hook_name} Hook Script
+
+This is an auto-generated hook template.
+Customize this script to perform your desired actions.
+"""
+
+import sys
+import os
+from pathlib import Path
+
+def main():
+    """Main hook function."""
+    print(f"Executing {hook_name} hook...")
+    
+    # Access environment variables
+    config_dir = os.getenv("AMAZONQ_CONFIG_DIR", "")
+    hooks_dir = os.getenv("AI_CONFIGURATOR_HOOKS_DIR", "")
+    hook_name = os.getenv("HOOK_NAME", "{hook_name}")
+    
+    print(f"Config directory: {{config_dir}}")
+    print(f"Hooks directory: {{hooks_dir}}")
+    print(f"Hook name: {{hook_name}}")
+    
+    # Add your custom logic here
+    # Example: Read configuration files, process data, etc.
+    
+    # Return success
+    return 0
+
+if __name__ == "__main__":
+    sys.exit(main())
+'''
+    
+    def _generate_shell_script_template(self, hook_name: str) -> str:
+        """Generate shell script template content."""
+        return f'''#!/bin/bash
+#
+# {hook_name} Hook Script
+#
+# This is an auto-generated hook template.
+# Customize this script to perform your desired actions.
+#
+
+set -e  # Exit on error
+
+echo "Executing {hook_name} hook..."
+
+# Access environment variables
+echo "Config directory: $AMAZONQ_CONFIG_DIR"
+echo "Hooks directory: $AI_CONFIGURATOR_HOOKS_DIR"
+echo "Hook name: $HOOK_NAME"
+
+# Add your custom logic here
+# Example: Process files, run commands, etc.
+
+echo "{hook_name} hook completed successfully"
+exit 0
+'''
+
     def create_hook_template(self, hook_name: str, hook_type: HookType = HookType.CONTEXT, 
                            trigger: HookTrigger = HookTrigger.ON_SESSION_START) -> bool:
         """Create a new YAML hook template."""

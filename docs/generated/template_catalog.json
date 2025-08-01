@@ -1,0 +1,1056 @@
+{
+  "profiles": [
+    {
+      "name": "minimal-example",
+      "description": "A basic profile demonstrating essential configuration options",
+      "category": "basic",
+      "template_type": "profile",
+      "version": "1.0.0",
+      "author": "AI Configurator Team",
+      "created": "2024-01-01",
+      "updated": "",
+      "tags": [
+        "beginner",
+        "basic",
+        "example"
+      ],
+      "complexity": "low",
+      "prerequisites": [],
+      "related_templates": [
+        "content-creator",
+        "student"
+      ],
+      "file_path": "profiles/basic/minimal.json"
+    },
+    {
+      "name": "content-creator",
+      "description": "Profile optimized for content creators, writers, and documentation specialists",
+      "category": "basic",
+      "template_type": "profile",
+      "version": "1.0.0",
+      "author": "AI Configurator Team",
+      "created": "2024-01-01",
+      "updated": "",
+      "tags": [
+        "content",
+        "writing",
+        "documentation",
+        "blogging",
+        "marketing"
+      ],
+      "complexity": "low",
+      "prerequisites": [],
+      "related_templates": [
+        "minimal",
+        "student",
+        "technical-writer"
+      ],
+      "file_path": "profiles/basic/content-creator.json"
+    },
+    {
+      "name": "student",
+      "description": "Profile optimized for students, researchers, and academic work",
+      "category": "basic",
+      "template_type": "profile",
+      "version": "1.0.0",
+      "author": "AI Configurator Team",
+      "created": "2024-01-01",
+      "updated": "",
+      "tags": [
+        "student",
+        "academic",
+        "research",
+        "education",
+        "learning"
+      ],
+      "complexity": "low",
+      "prerequisites": [],
+      "related_templates": [
+        "minimal",
+        "content-creator",
+        "researcher"
+      ],
+      "file_path": "profiles/basic/student.json"
+    },
+    {
+      "name": "data-scientist",
+      "description": "Profile optimized for data scientists, ML engineers, and analytics professionals",
+      "category": "professional",
+      "template_type": "profile",
+      "version": "1.0.0",
+      "author": "AI Configurator Team",
+      "created": "2024-01-01",
+      "updated": "",
+      "tags": [
+        "data-science",
+        "machine-learning",
+        "analytics",
+        "python",
+        "jupyter",
+        "research",
+        "modeling"
+      ],
+      "complexity": "medium",
+      "prerequisites": [
+        "Python environment",
+        "Jupyter notebooks",
+        "Git version control"
+      ],
+      "related_templates": [
+        "devops-engineer",
+        "security-specialist",
+        "technical-writer"
+      ],
+      "file_path": "profiles/professional/data-scientist.json"
+    },
+    {
+      "name": "security-specialist",
+      "description": "Profile optimized for security specialists, security engineers, and compliance professionals",
+      "category": "professional",
+      "template_type": "profile",
+      "version": "1.0.0",
+      "author": "AI Configurator Team",
+      "created": "2024-01-01",
+      "updated": "",
+      "tags": [
+        "security",
+        "cybersecurity",
+        "compliance",
+        "threat-detection",
+        "vulnerability-assessment",
+        "penetration-testing",
+        "incident-response",
+        "risk-management"
+      ],
+      "complexity": "medium",
+      "prerequisites": [
+        "Security fundamentals knowledge",
+        "Understanding of compliance frameworks",
+        "Network security concepts",
+        "Basic scripting skills"
+      ],
+      "related_templates": [
+        "devops-engineer",
+        "data-scientist",
+        "solutions-architect"
+      ],
+      "file_path": "profiles/professional/security-specialist.json"
+    },
+    {
+      "name": "minimal-example",
+      "description": "A basic profile demonstrating essential configuration options",
+      "category": "basic",
+      "template_type": "profile",
+      "version": "1.0.0",
+      "author": "AI Configurator Team",
+      "created": "2024-01-01",
+      "updated": "",
+      "tags": [
+        "beginner",
+        "basic",
+        "example"
+      ],
+      "complexity": "low",
+      "prerequisites": [],
+      "related_templates": [
+        "content-creator",
+        "student"
+      ],
+      "file_path": "profiles/basic/minimal.json"
+    },
+    {
+      "name": "content-creator",
+      "description": "Profile optimized for content creators, writers, and documentation specialists",
+      "category": "basic",
+      "template_type": "profile",
+      "version": "1.0.0",
+      "author": "AI Configurator Team",
+      "created": "2024-01-01",
+      "updated": "",
+      "tags": [
+        "content",
+        "writing",
+        "documentation",
+        "blogging",
+        "marketing"
+      ],
+      "complexity": "low",
+      "prerequisites": [],
+      "related_templates": [
+        "minimal",
+        "student",
+        "technical-writer"
+      ],
+      "file_path": "profiles/basic/content-creator.json"
+    },
+    {
+      "name": "student",
+      "description": "Profile optimized for students, researchers, and academic work",
+      "category": "basic",
+      "template_type": "profile",
+      "version": "1.0.0",
+      "author": "AI Configurator Team",
+      "created": "2024-01-01",
+      "updated": "",
+      "tags": [
+        "student",
+        "academic",
+        "research",
+        "education",
+        "learning"
+      ],
+      "complexity": "low",
+      "prerequisites": [],
+      "related_templates": [
+        "minimal",
+        "content-creator",
+        "researcher"
+      ],
+      "file_path": "profiles/basic/student.json"
+    },
+    {
+      "name": "data-scientist",
+      "description": "Profile optimized for data scientists, ML engineers, and analytics professionals",
+      "category": "professional",
+      "template_type": "profile",
+      "version": "1.0.0",
+      "author": "AI Configurator Team",
+      "created": "2024-01-01",
+      "updated": "",
+      "tags": [
+        "data-science",
+        "machine-learning",
+        "analytics",
+        "python",
+        "jupyter",
+        "research",
+        "modeling"
+      ],
+      "complexity": "medium",
+      "prerequisites": [
+        "Python environment",
+        "Jupyter notebooks",
+        "Git version control"
+      ],
+      "related_templates": [
+        "devops-engineer",
+        "security-specialist",
+        "technical-writer"
+      ],
+      "file_path": "profiles/professional/data-scientist.json"
+    },
+    {
+      "name": "security-specialist",
+      "description": "Profile optimized for security specialists, security engineers, and compliance professionals",
+      "category": "professional",
+      "template_type": "profile",
+      "version": "1.0.0",
+      "author": "AI Configurator Team",
+      "created": "2024-01-01",
+      "updated": "",
+      "tags": [
+        "security",
+        "cybersecurity",
+        "compliance",
+        "threat-detection",
+        "vulnerability-assessment",
+        "penetration-testing",
+        "incident-response",
+        "risk-management"
+      ],
+      "complexity": "medium",
+      "prerequisites": [
+        "Security fundamentals knowledge",
+        "Understanding of compliance frameworks",
+        "Network security concepts",
+        "Basic scripting skills"
+      ],
+      "related_templates": [
+        "devops-engineer",
+        "data-scientist",
+        "solutions-architect"
+      ],
+      "file_path": "profiles/professional/security-specialist.json"
+    }
+  ],
+  "contexts": [
+    {
+      "name": "Content Creation Guidelines",
+      "description": "This context provides comprehensive guidelines for content creators, writers, and documentation specialists using the AI Configurator system. It covers best practices for various types of content crea...",
+      "category": "domain",
+      "template_type": "context",
+      "version": "1.0.0",
+      "author": "AI Configurator Team",
+      "created": "",
+      "updated": "",
+      "tags": [
+        "documentation",
+        "testing",
+        "automation"
+      ],
+      "complexity": "high",
+      "prerequisites": [],
+      "related_templates": [],
+      "file_path": "contexts/domains/content-creation-guidelines.md"
+    },
+    {
+      "name": "Academic Research Methods",
+      "description": "This context provides comprehensive guidance for students and researchers using the AI Configurator system for academic work. It covers research methodologies, academic writing standards, and best pra...",
+      "category": "domain",
+      "template_type": "context",
+      "version": "1.0.0",
+      "author": "AI Configurator Team",
+      "created": "",
+      "updated": "",
+      "tags": [
+        "python",
+        "javascript",
+        "data-science",
+        "security",
+        "documentation",
+        "testing"
+      ],
+      "complexity": "high",
+      "prerequisites": [],
+      "related_templates": [],
+      "file_path": "contexts/domains/academic-research-methods.md"
+    },
+    {
+      "name": "Data Science Best Practices",
+      "description": "This context provides comprehensive guidelines for data science and machine learning projects, covering the entire ML lifecycle from data collection to model deployment and monitoring. These practices...",
+      "category": "domain",
+      "template_type": "context",
+      "version": "1.0.0",
+      "author": "AI Configurator Team",
+      "created": "",
+      "updated": "",
+      "tags": [
+        "python",
+        "data-science",
+        "devops",
+        "security",
+        "documentation",
+        "testing",
+        "automation"
+      ],
+      "complexity": "high",
+      "prerequisites": [],
+      "related_templates": [],
+      "file_path": "contexts/domains/data-science-best-practices.md"
+    },
+    {
+      "name": "Devops Methodologies",
+      "description": "This context provides comprehensive guidelines for DevOps practices, covering infrastructure as code, CI/CD pipelines, monitoring, security, and operational excellence. These methodologies ensure reli...",
+      "category": "domain",
+      "template_type": "context",
+      "version": "1.0.0",
+      "author": "AI Configurator Team",
+      "created": "",
+      "updated": "",
+      "tags": [
+        "python",
+        "javascript",
+        "data-science",
+        "devops",
+        "security",
+        "documentation",
+        "testing",
+        "automation"
+      ],
+      "complexity": "high",
+      "prerequisites": [],
+      "related_templates": [],
+      "file_path": "contexts/domains/devops-methodologies.md"
+    },
+    {
+      "name": "Security Guidelines",
+      "description": "This context provides comprehensive security guidelines covering application security, infrastructure security, data protection, compliance, and incident response. These practices ensure robust securi...",
+      "category": "domain",
+      "template_type": "context",
+      "version": "1.0.0",
+      "author": "AI Configurator Team",
+      "created": "",
+      "updated": "",
+      "tags": [
+        "python",
+        "javascript",
+        "data-science",
+        "devops",
+        "security",
+        "documentation",
+        "testing",
+        "automation"
+      ],
+      "complexity": "high",
+      "prerequisites": [],
+      "related_templates": [],
+      "file_path": "contexts/domains/security-guidelines.md"
+    },
+    {
+      "name": "Technical Writing Standards",
+      "description": "This context provides comprehensive guidelines for technical writing, covering documentation best practices, API documentation, user guides, and technical communication. These standards ensure clear, ...",
+      "category": "domain",
+      "template_type": "context",
+      "version": "1.0.0",
+      "author": "AI Configurator Team",
+      "created": "",
+      "updated": "",
+      "tags": [
+        "python",
+        "javascript",
+        "data-science",
+        "devops",
+        "security",
+        "documentation",
+        "testing",
+        "automation"
+      ],
+      "complexity": "high",
+      "prerequisites": [],
+      "related_templates": [],
+      "file_path": "contexts/domains/technical-writing-standards.md"
+    },
+    {
+      "name": "Code Review Process",
+      "description": "This context provides comprehensive guidelines for conducting effective code reviews that improve code quality, share knowledge, and maintain team standards. Use these practices to create a constructi...",
+      "category": "workflow",
+      "template_type": "context",
+      "version": "1.0.0",
+      "author": "AI Configurator Team",
+      "created": "",
+      "updated": "",
+      "tags": [
+        "data-science",
+        "security",
+        "documentation",
+        "testing",
+        "automation"
+      ],
+      "complexity": "high",
+      "prerequisites": [],
+      "related_templates": [],
+      "file_path": "contexts/workflows/code-review-process.md"
+    },
+    {
+      "name": "Incident Response",
+      "description": "This context provides comprehensive guidelines for handling incidents effectively, from initial detection through resolution and post-incident analysis. Use these procedures to minimize impact, restor...",
+      "category": "workflow",
+      "template_type": "context",
+      "version": "1.0.0",
+      "author": "AI Configurator Team",
+      "created": "",
+      "updated": "",
+      "tags": [
+        "devops",
+        "security",
+        "documentation",
+        "testing",
+        "automation"
+      ],
+      "complexity": "high",
+      "prerequisites": [],
+      "related_templates": [],
+      "file_path": "contexts/workflows/incident-response.md"
+    },
+    {
+      "name": "Testing Strategies",
+      "description": "This context provides comprehensive guidelines for implementing effective testing strategies that ensure code quality, prevent regressions, and maintain system reliability. Use these practices to buil...",
+      "category": "workflow",
+      "template_type": "context",
+      "version": "1.0.0",
+      "author": "AI Configurator Team",
+      "created": "",
+      "updated": "",
+      "tags": [
+        "python",
+        "javascript",
+        "data-science",
+        "devops",
+        "security",
+        "documentation",
+        "testing",
+        "automation"
+      ],
+      "complexity": "high",
+      "prerequisites": [],
+      "related_templates": [],
+      "file_path": "contexts/workflows/testing-strategies.md"
+    },
+    {
+      "name": "Content Creation Guidelines",
+      "description": "This context provides comprehensive guidelines for content creators, writers, and documentation specialists using the AI Configurator system. It covers best practices for various types of content crea...",
+      "category": "domain",
+      "template_type": "context",
+      "version": "1.0.0",
+      "author": "AI Configurator Team",
+      "created": "",
+      "updated": "",
+      "tags": [
+        "documentation",
+        "testing",
+        "automation"
+      ],
+      "complexity": "high",
+      "prerequisites": [],
+      "related_templates": [],
+      "file_path": "contexts/domains/content-creation-guidelines.md"
+    },
+    {
+      "name": "Academic Research Methods",
+      "description": "This context provides comprehensive guidance for students and researchers using the AI Configurator system for academic work. It covers research methodologies, academic writing standards, and best pra...",
+      "category": "domain",
+      "template_type": "context",
+      "version": "1.0.0",
+      "author": "AI Configurator Team",
+      "created": "",
+      "updated": "",
+      "tags": [
+        "python",
+        "javascript",
+        "data-science",
+        "security",
+        "documentation",
+        "testing"
+      ],
+      "complexity": "high",
+      "prerequisites": [],
+      "related_templates": [],
+      "file_path": "contexts/domains/academic-research-methods.md"
+    },
+    {
+      "name": "Data Science Best Practices",
+      "description": "This context provides comprehensive guidelines for data science and machine learning projects, covering the entire ML lifecycle from data collection to model deployment and monitoring. These practices...",
+      "category": "domain",
+      "template_type": "context",
+      "version": "1.0.0",
+      "author": "AI Configurator Team",
+      "created": "",
+      "updated": "",
+      "tags": [
+        "python",
+        "data-science",
+        "devops",
+        "security",
+        "documentation",
+        "testing",
+        "automation"
+      ],
+      "complexity": "high",
+      "prerequisites": [],
+      "related_templates": [],
+      "file_path": "contexts/domains/data-science-best-practices.md"
+    },
+    {
+      "name": "Devops Methodologies",
+      "description": "This context provides comprehensive guidelines for DevOps practices, covering infrastructure as code, CI/CD pipelines, monitoring, security, and operational excellence. These methodologies ensure reli...",
+      "category": "domain",
+      "template_type": "context",
+      "version": "1.0.0",
+      "author": "AI Configurator Team",
+      "created": "",
+      "updated": "",
+      "tags": [
+        "python",
+        "javascript",
+        "data-science",
+        "devops",
+        "security",
+        "documentation",
+        "testing",
+        "automation"
+      ],
+      "complexity": "high",
+      "prerequisites": [],
+      "related_templates": [],
+      "file_path": "contexts/domains/devops-methodologies.md"
+    },
+    {
+      "name": "Security Guidelines",
+      "description": "This context provides comprehensive security guidelines covering application security, infrastructure security, data protection, compliance, and incident response. These practices ensure robust securi...",
+      "category": "domain",
+      "template_type": "context",
+      "version": "1.0.0",
+      "author": "AI Configurator Team",
+      "created": "",
+      "updated": "",
+      "tags": [
+        "python",
+        "javascript",
+        "data-science",
+        "devops",
+        "security",
+        "documentation",
+        "testing",
+        "automation"
+      ],
+      "complexity": "high",
+      "prerequisites": [],
+      "related_templates": [],
+      "file_path": "contexts/domains/security-guidelines.md"
+    },
+    {
+      "name": "Technical Writing Standards",
+      "description": "This context provides comprehensive guidelines for technical writing, covering documentation best practices, API documentation, user guides, and technical communication. These standards ensure clear, ...",
+      "category": "domain",
+      "template_type": "context",
+      "version": "1.0.0",
+      "author": "AI Configurator Team",
+      "created": "",
+      "updated": "",
+      "tags": [
+        "python",
+        "javascript",
+        "data-science",
+        "devops",
+        "security",
+        "documentation",
+        "testing",
+        "automation"
+      ],
+      "complexity": "high",
+      "prerequisites": [],
+      "related_templates": [],
+      "file_path": "contexts/domains/technical-writing-standards.md"
+    },
+    {
+      "name": "Code Review Process",
+      "description": "This context provides comprehensive guidelines for conducting effective code reviews that improve code quality, share knowledge, and maintain team standards. Use these practices to create a constructi...",
+      "category": "workflow",
+      "template_type": "context",
+      "version": "1.0.0",
+      "author": "AI Configurator Team",
+      "created": "",
+      "updated": "",
+      "tags": [
+        "data-science",
+        "security",
+        "documentation",
+        "testing",
+        "automation"
+      ],
+      "complexity": "high",
+      "prerequisites": [],
+      "related_templates": [],
+      "file_path": "contexts/workflows/code-review-process.md"
+    },
+    {
+      "name": "Incident Response",
+      "description": "This context provides comprehensive guidelines for handling incidents effectively, from initial detection through resolution and post-incident analysis. Use these procedures to minimize impact, restor...",
+      "category": "workflow",
+      "template_type": "context",
+      "version": "1.0.0",
+      "author": "AI Configurator Team",
+      "created": "",
+      "updated": "",
+      "tags": [
+        "devops",
+        "security",
+        "documentation",
+        "testing",
+        "automation"
+      ],
+      "complexity": "high",
+      "prerequisites": [],
+      "related_templates": [],
+      "file_path": "contexts/workflows/incident-response.md"
+    },
+    {
+      "name": "Testing Strategies",
+      "description": "This context provides comprehensive guidelines for implementing effective testing strategies that ensure code quality, prevent regressions, and maintain system reliability. Use these practices to buil...",
+      "category": "workflow",
+      "template_type": "context",
+      "version": "1.0.0",
+      "author": "AI Configurator Team",
+      "created": "",
+      "updated": "",
+      "tags": [
+        "python",
+        "javascript",
+        "data-science",
+        "devops",
+        "security",
+        "documentation",
+        "testing",
+        "automation"
+      ],
+      "complexity": "high",
+      "prerequisites": [],
+      "related_templates": [],
+      "file_path": "contexts/workflows/testing-strategies.md"
+    }
+  ],
+  "hooks": [
+    {
+      "name": "auto-documentation",
+      "description": "Automatically generate and update project documentation",
+      "category": "automation",
+      "template_type": "hook",
+      "version": "1.0",
+      "author": "AI Configurator Team",
+      "created": "",
+      "updated": "",
+      "tags": [
+        "trigger-on-file-save",
+        "automation",
+        "documentation",
+        "automation",
+        "code-analysis"
+      ],
+      "complexity": "medium",
+      "prerequisites": [
+        "Python 3.8+",
+        "Project with source code"
+      ],
+      "related_templates": [
+        "code-quality-check",
+        "environment-setup"
+      ],
+      "file_path": "hooks/automation/auto-documentation.yaml"
+    },
+    {
+      "name": "code-quality-check",
+      "description": "Automated code analysis and quality metrics collection",
+      "category": "automation",
+      "template_type": "hook",
+      "version": "1.0",
+      "author": "AI Configurator Team",
+      "created": "",
+      "updated": "",
+      "tags": [
+        "trigger-on-file-save",
+        "automation",
+        "code-quality",
+        "automation",
+        "linting",
+        "security"
+      ],
+      "complexity": "high",
+      "prerequisites": [
+        "Python 3.8+",
+        "Node.js (for JavaScript/TypeScript)",
+        "Language-specific linters"
+      ],
+      "related_templates": [
+        "auto-documentation",
+        "environment-setup"
+      ],
+      "file_path": "hooks/automation/code-quality-check.yaml"
+    },
+    {
+      "name": "environment-setup",
+      "description": "Initialize and configure development environment",
+      "category": "automation",
+      "template_type": "hook",
+      "version": "1.0",
+      "author": "AI Configurator Team",
+      "created": "",
+      "updated": "",
+      "tags": [
+        "trigger-on-session-start",
+        "automation",
+        "environment",
+        "setup",
+        "automation",
+        "development"
+      ],
+      "complexity": "high",
+      "prerequisites": [
+        "Administrative privileges (for package installation)",
+        "Internet connection"
+      ],
+      "related_templates": [
+        "auto-documentation",
+        "code-quality-check"
+      ],
+      "file_path": "hooks/automation/environment-setup.yaml"
+    },
+    {
+      "name": "context-switcher",
+      "description": "Dynamically load contexts based on project type and current working environment",
+      "category": "enhancement",
+      "template_type": "hook",
+      "version": "1.0",
+      "author": "AI Configurator Team",
+      "created": "",
+      "updated": "",
+      "tags": [
+        "trigger-on-session-start",
+        "enhancement",
+        "context-management",
+        "automation",
+        "intelligence"
+      ],
+      "complexity": "high",
+      "prerequisites": [
+        "Python 3.8+",
+        "Project directory structure",
+        "Available context files"
+      ],
+      "related_templates": [
+        "smart-suggestions",
+        "environment-setup"
+      ],
+      "file_path": "hooks/enhancement/context-switcher.yaml"
+    },
+    {
+      "name": "smart-suggestions",
+      "description": "Generate context-aware suggestions based on current project state and user activity",
+      "category": "enhancement",
+      "template_type": "hook",
+      "version": "1.0",
+      "author": "AI Configurator Team",
+      "created": "",
+      "updated": "",
+      "tags": [
+        "trigger-on-file-open",
+        "enhancement",
+        "suggestions",
+        "intelligence",
+        "code-analysis",
+        "best-practices"
+      ],
+      "complexity": "high",
+      "prerequisites": [
+        "Python 3.8+",
+        "Project with source code",
+        "Active context system"
+      ],
+      "related_templates": [
+        "context-switcher",
+        "code-quality-check",
+        "auto-documentation"
+      ],
+      "file_path": "hooks/enhancement/smart-suggestions.yaml"
+    },
+    {
+      "name": "auto-documentation",
+      "description": "Automatically generate and update project documentation",
+      "category": "automation",
+      "template_type": "hook",
+      "version": "1.0",
+      "author": "AI Configurator Team",
+      "created": "",
+      "updated": "",
+      "tags": [
+        "trigger-on-file-save",
+        "automation",
+        "documentation",
+        "automation",
+        "code-analysis"
+      ],
+      "complexity": "medium",
+      "prerequisites": [
+        "Python 3.8+",
+        "Project with source code"
+      ],
+      "related_templates": [
+        "code-quality-check",
+        "environment-setup"
+      ],
+      "file_path": "hooks/automation/auto-documentation.yaml"
+    },
+    {
+      "name": "code-quality-check",
+      "description": "Automated code analysis and quality metrics collection",
+      "category": "automation",
+      "template_type": "hook",
+      "version": "1.0",
+      "author": "AI Configurator Team",
+      "created": "",
+      "updated": "",
+      "tags": [
+        "trigger-on-file-save",
+        "automation",
+        "code-quality",
+        "automation",
+        "linting",
+        "security"
+      ],
+      "complexity": "high",
+      "prerequisites": [
+        "Python 3.8+",
+        "Node.js (for JavaScript/TypeScript)",
+        "Language-specific linters"
+      ],
+      "related_templates": [
+        "auto-documentation",
+        "environment-setup"
+      ],
+      "file_path": "hooks/automation/code-quality-check.yaml"
+    },
+    {
+      "name": "environment-setup",
+      "description": "Initialize and configure development environment",
+      "category": "automation",
+      "template_type": "hook",
+      "version": "1.0",
+      "author": "AI Configurator Team",
+      "created": "",
+      "updated": "",
+      "tags": [
+        "trigger-on-session-start",
+        "automation",
+        "environment",
+        "setup",
+        "automation",
+        "development"
+      ],
+      "complexity": "high",
+      "prerequisites": [
+        "Administrative privileges (for package installation)",
+        "Internet connection"
+      ],
+      "related_templates": [
+        "auto-documentation",
+        "code-quality-check"
+      ],
+      "file_path": "hooks/automation/environment-setup.yaml"
+    },
+    {
+      "name": "context-switcher",
+      "description": "Dynamically load contexts based on project type and current working environment",
+      "category": "enhancement",
+      "template_type": "hook",
+      "version": "1.0",
+      "author": "AI Configurator Team",
+      "created": "",
+      "updated": "",
+      "tags": [
+        "trigger-on-session-start",
+        "enhancement",
+        "context-management",
+        "automation",
+        "intelligence"
+      ],
+      "complexity": "high",
+      "prerequisites": [
+        "Python 3.8+",
+        "Project directory structure",
+        "Available context files"
+      ],
+      "related_templates": [
+        "smart-suggestions",
+        "environment-setup"
+      ],
+      "file_path": "hooks/enhancement/context-switcher.yaml"
+    },
+    {
+      "name": "smart-suggestions",
+      "description": "Generate context-aware suggestions based on current project state and user activity",
+      "category": "enhancement",
+      "template_type": "hook",
+      "version": "1.0",
+      "author": "AI Configurator Team",
+      "created": "",
+      "updated": "",
+      "tags": [
+        "trigger-on-file-open",
+        "enhancement",
+        "suggestions",
+        "intelligence",
+        "code-analysis",
+        "best-practices"
+      ],
+      "complexity": "high",
+      "prerequisites": [
+        "Python 3.8+",
+        "Project with source code",
+        "Active context system"
+      ],
+      "related_templates": [
+        "context-switcher",
+        "code-quality-check",
+        "auto-documentation"
+      ],
+      "file_path": "hooks/enhancement/smart-suggestions.yaml"
+    }
+  ],
+  "workflows": [
+    {
+      "name": "Complete Dev Setup",
+      "description": "This workflow is part of the AI Configurator project and is licensed under the MIT License....",
+      "category": "workflow",
+      "template_type": "workflow",
+      "version": "1.0.0",
+      "author": "AI Configurator Team",
+      "created": "",
+      "updated": "",
+      "tags": [
+        "development",
+        "automation",
+        "code-quality",
+        "documentation",
+        "workflow",
+        "complete-setup",
+        "workflow",
+        "complete"
+      ],
+      "complexity": "high",
+      "prerequisites": [],
+      "related_templates": [],
+      "file_path": "workflows/complete-dev-setup"
+    },
+    {
+      "name": "Content Creation Suite",
+      "description": "This workflow is part of the AI Configurator project and is licensed under the MIT License. Content templates and examples are available under Creative Commons licenses as specified....",
+      "category": "workflow",
+      "template_type": "workflow",
+      "version": "1.0.0",
+      "author": "AI Configurator Team",
+      "created": "",
+      "updated": "",
+      "tags": [
+        "workflow",
+        "complete"
+      ],
+      "complexity": "high",
+      "prerequisites": [],
+      "related_templates": [],
+      "file_path": "workflows/content-creation-suite"
+    },
+    {
+      "name": "Complete Dev Setup",
+      "description": "This workflow is part of the AI Configurator project and is licensed under the MIT License....",
+      "category": "workflow",
+      "template_type": "workflow",
+      "version": "1.0.0",
+      "author": "AI Configurator Team",
+      "created": "",
+      "updated": "",
+      "tags": [
+        "development",
+        "automation",
+        "code-quality",
+        "documentation",
+        "workflow",
+        "complete-setup",
+        "workflow",
+        "complete"
+      ],
+      "complexity": "high",
+      "prerequisites": [],
+      "related_templates": [],
+      "file_path": "workflows/complete-dev-setup"
+    },
+    {
+      "name": "Content Creation Suite",
+      "description": "This workflow is part of the AI Configurator project and is licensed under the MIT License. Content templates and examples are available under Creative Commons licenses as specified....",
+      "category": "workflow",
+      "template_type": "workflow",
+      "version": "1.0.0",
+      "author": "AI Configurator Team",
+      "created": "",
+      "updated": "",
+      "tags": [
+        "workflow",
+        "complete"
+      ],
+      "complexity": "high",
+      "prerequisites": [],
+      "related_templates": [],
+      "file_path": "workflows/content-creation-suite"
+    }
+  ],
+  "generated_at": "2025-08-01T15:56:37.591369",
+  "total_count": 42
+}

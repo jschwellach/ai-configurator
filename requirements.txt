@@ -9,3 +9,4 @@ packaging>=21.0.0
 platformdirs>=3.0.0
 watchdog>=3.0.0
 jinja2>=3.0.0
+jsonschema>=4.0.0

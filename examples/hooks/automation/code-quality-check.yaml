@@ -1,0 +1,147 @@
+name: "code-quality-check"
+description: "Automated code analysis and quality metrics collection"
+version: "1.0"
+type: "automation"
+trigger: "on_file_save"
+timeout: 120
+enabled: true
+
+# Configuration for code quality analysis
+config:
+  # File patterns to analyze
+  watch_patterns:
+    - "**/*.py"
+    - "**/*.js"
+    - "**/*.ts"
+    - "**/*.jsx"
+    - "**/*.tsx"
+    - "**/*.java"
+    - "**/*.cpp"
+    - "**/*.c"
+    - "**/*.go"
+    - "**/*.rs"
+
+  # Quality checks to perform
+  checks:
+    - "syntax"
+    - "style"
+    - "complexity"
+    - "security"
+    - "performance"
+    - "maintainability"
+
+  # Output formats for reports
+  report_formats:
+    - "json"
+    - "markdown"
+    - "html"
+
+  # Output directory for reports
+  output_dir: "reports/quality"
+
+  # Severity levels to report
+  severity_levels:
+    - "error"
+    - "warning"
+    - "info"
+
+  # Language-specific configurations
+  languages:
+    python:
+      linters:
+        - "flake8"
+        - "pylint"
+        - "mypy"
+        - "bandit" # security
+      max_line_length: 88
+      max_complexity: 10
+      ignore_patterns:
+        - "__pycache__"
+        - "*.pyc"
+        - "venv/"
+        - ".venv/"
+
+    javascript:
+      linters:
+        - "eslint"
+        - "jshint"
+      max_line_length: 100
+      max_complexity: 15
+      ignore_patterns:
+        - "node_modules/"
+        - "dist/"
+        - "build/"
+
+    typescript:
+      linters:
+        - "tslint"
+        - "eslint"
+      max_line_length: 100
+      max_complexity: 15
+      strict_mode: true
+
+    java:
+      linters:
+        - "checkstyle"
+        - "spotbugs"
+      max_line_length: 120
+      max_complexity: 12
+
+    go:
+      linters:
+        - "golint"
+        - "go vet"
+        - "gofmt"
+      max_line_length: 120
+
+  # Thresholds for quality gates
+  quality_gates:
+    min_coverage: 80
+    max_duplications: 5
+    max_technical_debt: "1h"
+    max_critical_issues: 0
+    max_major_issues: 5
+
+# Execution script
+script: "code_quality_check.py"
+
+# Conditions for when this hook should run
+conditions:
+  - file_extension: [".py", ".js", ".ts", ".jsx", ".tsx", ".java", ".cpp", ".c", ".go", ".rs"]
+    project_type: ["application", "library", "service"]
+  - exclude_paths: ["node_modules", "__pycache__", ".git", "venv", ".venv", "dist", "build"]
+
+# Context sources for code quality guidelines
+context:
+  sources:
+    - "contexts/domains/development-guidelines.md"
+    - "contexts/workflows/code-review-process.md"
+  tags: ["code-quality", "automation", "linting", "security"]
+  priority: 2
+
+# Integration with other tools
+integrations:
+  git:
+    pre_commit: true
+    block_on_failure: false
+  ci_cd:
+    export_metrics: true
+    fail_build_on_critical: true
+  ide:
+    real_time_feedback: true
+
+# Metadata
+metadata:
+  author: "AI Configurator Team"
+  category: "automation"
+  complexity: "high"
+  prerequisites:
+    - "Python 3.8+"
+    - "Node.js (for JavaScript/TypeScript)"
+    - "Language-specific linters"
+  related_hooks:
+    - "auto-documentation"
+    - "environment-setup"
+  documentation:
+    setup_guide: "docs/hooks/code-quality-setup.md"
+    troubleshooting: "docs/hooks/code-quality-troubleshooting.md"

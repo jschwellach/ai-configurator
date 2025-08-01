@@ -1,0 +1,109 @@
+{
+    // ============================================================================
+    // MINIMAL PROFILE EXAMPLE
+    // ============================================================================
+    // This is the most basic profile configuration for the AI Configurator.
+    // It demonstrates the essential structure and options needed to get started.
+    // 
+    // A profile defines which contexts (guidance documents) should be loaded
+    // and which hooks (automation scripts) should be activated for your workflow.
+    // ============================================================================
+    // METADATA SECTION
+    // ============================================================================
+    // Optional metadata that describes this profile. This information helps
+    // with profile management and documentation but doesn't affect functionality.
+    "metadata": {
+        "name": "minimal-example",
+        "description": "A basic profile demonstrating essential configuration options",
+        "category": "basic",
+        "version": "1.0.0",
+        "author": "AI Configurator Team",
+        "created": "2024-01-01",
+        "tags": [
+            "beginner",
+            "basic",
+            "example"
+        ],
+        "complexity": "low",
+        "prerequisites": [],
+        "related_templates": [
+            "content-creator",
+            "student"
+        ]
+    },
+    // CONTEXT PATHS SECTION
+    // ============================================================================
+    // The "paths" array defines which context files should be loaded when this
+    // profile is active. Contexts provide domain-specific guidance and best
+    // practices to the AI assistant.
+    // 
+    // Path formats supported:
+    // - Relative paths: "contexts/development-guidelines.md"
+    // - Glob patterns: "contexts/**/*.md" (loads all .md files in contexts/)
+    // - Absolute paths: "/full/path/to/context.md" (not recommended)
+    // ============================================================================
+    "paths": [
+        // Basic development guidelines - provides fundamental coding best practices
+        "contexts/development-guidelines.md",
+        // Project README - gives the AI context about your specific project
+        "README.md"
+    ],
+    // HOOKS SECTION (Optional)
+    // ============================================================================
+    // Hooks define automation scripts that run in response to specific triggers.
+    // This minimal example doesn't include hooks to keep things simple, but you
+    // can add them here when you're ready for automation.
+    // 
+    // Example hook structure:
+    // "hooks": {
+    //   "hook-name": {
+    //     "enabled": true,
+    //     "config": {
+    //       "option1": "value1"
+    //     }
+    //   }
+    // }
+    // ============================================================================
+    "hooks": {
+        // No hooks defined in this minimal example
+        // Uncomment and modify the example below to add your first hook:
+        // "auto-documentation": {
+        //   "enabled": false,
+        //   "description": "Automatically generate documentation when files change",
+        //   "config": {
+        //     "watch_patterns": ["src/**/*.py", "docs/**/*.md"],
+        //     "output_format": "markdown"
+        //   }
+        // }
+    },
+    // SETTINGS SECTION (Optional)
+    // ============================================================================
+    // Global settings that affect how this profile behaves. These are optional
+    // and the system will use sensible defaults if not specified.
+    // ============================================================================
+    "settings": {
+        // Whether to automatically reload contexts when files change
+        "auto_reload": true,
+        // Maximum number of context files to load (prevents memory issues)
+        "max_contexts": 50,
+        // Whether to validate context files on load
+        "validate_contexts": true,
+        // Logging level for this profile (debug, info, warning, error)
+        "log_level": "info"
+    }
+    // ============================================================================
+    // CUSTOMIZATION NOTES
+    // ============================================================================
+    // To customize this profile for your needs:
+    // 
+    // 1. Add more context paths to the "paths" array
+    // 2. Enable hooks by setting "enabled": true and configuring options
+    // 3. Adjust settings based on your preferences
+    // 4. Update metadata to reflect your customizations
+    // 
+    // For more advanced examples, see:
+    // - examples/profiles/basic/content-creator.json
+    // - examples/profiles/basic/student.json
+    // - examples/profiles/professional/
+    // ============================================================================
+}
