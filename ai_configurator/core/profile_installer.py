@@ -2,6 +2,7 @@
 Simplified Profile Installer for AI Configurator.
 """
 
+import json
 import logging
 import shutil
 import yaml
@@ -25,7 +26,7 @@ class ProfileInstaller:
         self.amazonq_profiles_dir = Path.home() / ".aws" / "amazonq" / "profiles"
         
     def install_profile(self, profile_id: str) -> bool:
-        """Install a profile by copying its contexts to Amazon Q directory."""
+        """Install a profile by copying its contexts and creating Q CLI profile structure."""
         try:
             # Get profile configuration
             config = self.library_manager.get_configuration_by_id(profile_id)
@@ -47,23 +48,37 @@ class ProfileInstaller:
             ensure_directory(self.amazonq_contexts_dir)
             ensure_directory(self.amazonq_profiles_dir)
             
-            # Copy contexts
+            # Copy contexts and collect paths
             contexts = profile_data.get('contexts', [])
             profile_dir = profile_path.parent
+            context_paths = []
             
             for context_file in contexts:
                 source_path = profile_dir / "contexts" / context_file
                 if source_path.exists():
                     dest_path = self.amazonq_contexts_dir / context_file
                     copy_file(source_path, dest_path)
+                    context_paths.append(str(dest_path))
                     self.logger.info(f"Copied context: {context_file}")
                 else:
                     self.logger.warning(f"Context file not found: {source_path}")
             
-            # Create profile marker file
-            profile_marker = self.amazonq_profiles_dir / f"{profile_id}.installed"
-            profile_marker.write_text(f"Installed: {config.name} v{config.version}")
+            # Create Q CLI profile directory structure
+            profile_name = profile_id.replace('-v1', '')  # Remove version suffix for cleaner profile name
+            q_profile_dir = self.amazonq_profiles_dir / profile_name
+            ensure_directory(q_profile_dir)
             
+            # Create context.json file for Q CLI
+            context_json = {
+                "paths": context_paths,
+                "hooks": {}
+            }
+            
+            context_json_path = q_profile_dir / "context.json"
+            with open(context_json_path, 'w', encoding='utf-8') as f:
+                json.dump(context_json, f, indent=2)
+            
+            self.logger.info(f"Created Q CLI profile: {profile_name}")
             self.logger.info(f"Successfully installed profile: {config.name}")
             return True
             
@@ -72,7 +87,7 @@ class ProfileInstaller:
             return False
     
     def remove_profile(self, profile_id: str) -> bool:
-        """Remove a profile by deleting its contexts and marker."""
+        """Remove a profile by deleting its contexts and Q CLI profile directory."""
         try:
             # Get profile configuration
             config = self.library_manager.get_configuration_by_id(profile_id)
@@ -99,10 +114,12 @@ class ProfileInstaller:
                     context_path.unlink()
                     self.logger.info(f"Removed context: {context_file}")
             
-            # Remove profile marker file
-            profile_marker = self.amazonq_profiles_dir / f"{profile_id}.installed"
-            if profile_marker.exists():
-                profile_marker.unlink()
+            # Remove Q CLI profile directory
+            profile_name = profile_id.replace('-v1', '')  # Remove version suffix
+            q_profile_dir = self.amazonq_profiles_dir / profile_name
+            if q_profile_dir.exists():
+                shutil.rmtree(q_profile_dir)
+                self.logger.info(f"Removed Q CLI profile directory: {profile_name}")
             
             self.logger.info(f"Successfully removed profile: {config.name}")
             return True
@@ -112,9 +129,11 @@ class ProfileInstaller:
             return False
     
     def is_profile_installed(self, profile_id: str) -> bool:
-        """Check if a profile is installed."""
-        profile_marker = self.amazonq_profiles_dir / f"{profile_id}.installed"
-        return profile_marker.exists()
+        """Check if a profile is installed by looking for Q CLI profile directory."""
+        profile_name = profile_id.replace('-v1', '')  # Remove version suffix
+        q_profile_dir = self.amazonq_profiles_dir / profile_name
+        context_json_path = q_profile_dir / "context.json"
+        return context_json_path.exists()
     
     def list_installed_profiles(self) -> List[str]:
         """List all installed profiles."""
