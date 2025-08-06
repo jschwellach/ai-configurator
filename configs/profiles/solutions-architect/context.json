@@ -1,9 +1,0 @@
-{
-  "paths": [
-    ".amazonq/rules/**/*.md",
-    "README.md",
-    "AmazonQ.md",
-    "contexts/aws-best-practices.md",
-    "contexts/architecture-patterns.md"
-  ]
-}

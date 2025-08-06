@@ -1,9 +1,0 @@
-{
-  "paths": [
-    ".amazonq/rules/**/*.md",
-    "README.md",
-    "CONTRIBUTING.md",
-    "contexts/development-guidelines.md",
-    "contexts/troubleshooting.md"
-  ]
-}

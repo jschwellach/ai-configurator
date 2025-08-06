@@ -3,20 +3,17 @@
 # Documentation
 include README.md
 include LICENSE
-include CHANGELOG.md
+include CONTRIBUTING.md
 
 # Configuration files
 include pyproject.toml
 include requirements.txt
 include requirements-dev.txt
 
-# Configuration templates and examples
-recursive-include configs *.json *.yaml *.yml
-recursive-include contexts *.md *.txt
-recursive-include hooks *.py *.yaml *.yml *.md
-recursive-include templates *.yaml *.yml *.json *.md *.txt
+# Library profiles and configurations
+recursive-include library *.yaml *.yml *.md *.txt
 
-# Tests (if we want to include them)
+# Tests
 recursive-include tests *.py
 
 # Exclude development and build artifacts
@@ -32,3 +29,4 @@ global-exclude build
 global-exclude dist
 global-exclude venv
 global-exclude .venv
+global-exclude project_backup

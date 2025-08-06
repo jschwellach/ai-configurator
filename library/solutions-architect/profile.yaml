@@ -1,0 +1,7 @@
+name: "Solutions Architect Profile"
+description: "Complete profile for solutions architects with AWS best practices and architecture patterns"
+version: "1.0.0"
+contexts:
+  - "architecture-patterns.md"
+  - "aws-best-practices.md"
+hooks: []

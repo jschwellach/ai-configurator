@@ -1,0 +1,8 @@
+name: "Developer Profile"
+description: "Complete profile for software developers with development guidelines and best practices"
+version: "1.0.0"
+contexts:
+  - "development-guidelines.md"
+  - "aws-best-practices.md"
+hooks:
+  - "context-loader.yaml"

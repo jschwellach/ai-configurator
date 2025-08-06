@@ -60,15 +60,16 @@ Repository = "https://github.com/your-org/ai-configurator.git"
 ai-config = "ai_configurator.cli:main"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/ai_configurator"]
+packages = ["ai_configurator"]
 
 [tool.hatch.build.targets.sdist]
 include = [
     "/src",
-    "/configs",
-    "/contexts",
-    "/hooks",
-    "/templates",
+    "/library",
+    "/examples",
+    "/docs",
+    "/install.py",
+    "/uvx_install.py",
 ]
 
 [tool.black]

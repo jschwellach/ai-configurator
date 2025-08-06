@@ -1,6 +1,0 @@
-{
-  "paths": [
-    ".amazonq/rules/**/*.md",
-    "README.md"
-  ]
-}

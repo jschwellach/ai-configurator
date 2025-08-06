@@ -8,31 +8,23 @@ Simplify the setup and sharing of Amazon Q CLI configurations across teams and e
 
 ## ✨ Features
 
-- **Cross-Platform**: Works on Windows, macOS, and Linux
-- **Modular Configuration**: Pick and choose components you need
+- **Simple Commands**: Just 4 essential commands - list, install, remove, info
 - **Profile Management**: Switch between different work contexts easily
-- **Safe Operations**: Automatic backups and rollback capabilities
-- **MCP Server Management**: Install and manage MCP servers effortlessly
+- **Cross-Platform**: Works on Windows, macOS, and Linux
 - **Context Sharing**: Share knowledge bases and contexts across teams
-- **Hook System**: Automate workflows with custom hooks
+- **Safe Operations**: Simple installation to Amazon Q directory
 
 ## 📦 Installation
 
 ### Quick Install
 
 ```bash
-# Using uv (recommended)
-pip install uv
-uv tool install --from . ai-configurator
-
 # Using pip
-pip install -e .
+pip install ai-configurator
 
 # Verify installation
 ai-config --help
 ```
-
-For detailed installation instructions, platform-specific guidance, and troubleshooting, see the [Installation Guide](docs/installation.md).
 
 ### Development Setup
 
@@ -44,51 +36,62 @@ pip install -r requirements-dev.txt
 pip install -e .
 ```
 
-For complete development setup instructions, see [Development Setup](docs/development/setup.md).
-
 ## 🚀 Quick Start
 
 ```bash
-# Install via pip
-pip install ai-configurator
+# List available profiles
+ai-config list
 
-# Install base configuration
-ai-config install
+# Install a profile
+ai-config install developer-v1
 
-# Install with specific profile
-ai-config install --profile solutions-architect
+# Check profile details
+ai-config info developer-v1
 
-# Switch between profiles
-ai-config profile switch development
+# Remove a profile
+ai-config remove developer-v1
 ```
 
 ## 📋 Commands
 
 ```bash
-ai-config install [--profile PROFILE]     # Install configuration
-ai-config update [--preserve-personal]    # Update existing config
-ai-config profile list                    # List available profiles
-ai-config profile switch PROFILE          # Switch to profile
-ai-config backup                          # Backup current config
-ai-config restore BACKUP_ID               # Restore from backup
-ai-config validate                        # Validate current setup
-ai-config status                          # Show configuration status
+ai-config list [--query QUERY]           # List available profiles
+ai-config install PROFILE_ID             # Install a profile
+ai-config remove PROFILE_ID              # Remove an installed profile
+ai-config info PROFILE_ID                # Show profile details
 ```
+
+## 📚 Available Profiles
+
+### Role-Based Profiles
+- **developer-v1** - Complete profile for software developers with development guidelines and best practices
+- **solutions-architect-v1** - Complete profile for solutions architects with AWS best practices and architecture patterns
+- **engagement-manager-v1** - Complete profile for engagement managers with client communication and project delivery contexts
+
+### Task-Based Profiles
+- **document-helper-v1** - Profile for document writers with guidelines for creating and editing documents effectively
+- **default-v1** - Basic profile configuration with minimal context for general use
+
+### Meta Profiles
+- **documentation-v1** - Complete documentation profile for AI Configurator itself with installation guides and development docs
 
 ## 🏗️ Project Structure
 
 ```
 ai-configurator/
-├── src/ai_configurator/           # Main package
-│   ├── commands/                  # CLI command implementations
+├── ai_configurator/               # Main package
 │   ├── core/                      # Core functionality
-│   └── utils/                     # Utility functions
-├── configs/                       # Configuration templates
-│   ├── mcp-servers/              # MCP server definitions
-│   └── profiles/                 # Profile templates
-├── contexts/                      # Shared context files
-├── hooks/                        # Hook scripts
-└── templates/                    # Configuration templates
+│   │   ├── library_manager.py     # Library operations
+│   │   ├── profile_installer.py   # Profile installation
+│   │   ├── file_utils.py          # File utilities
+│   │   └── catalog_schema.py      # Data models
+│   └── cli.py                     # Command-line interface
+├── library/                       # Configuration profiles
+│   ├── default/                   # Default profile
+│   ├── developer/                 # Developer profile
+│   ├── solutions-architect/       # Solutions architect profile
+│   └── documentation/             # Documentation profile
+└── tests/                         # Test files
 ```
 
 ## 🛠️ Development
@@ -101,21 +104,35 @@ pip install -r requirements-dev.txt
 pip install -e .
 
 # Run tests
-python test_install.py
 pytest
+
+# Test CLI
+ai-config list
 ```
 
-For complete development setup, package configuration, and contribution guidelines, see [Development Setup](docs/development/setup.md).
+## 🔧 How It Works
+
+1. **Profiles** are stored in the `/library/` directory
+2. Each profile contains contexts (markdown files) and configuration
+3. **Installing** a profile copies its contexts to `~/.aws/amazonq/contexts/`
+4. **Amazon Q CLI** automatically picks up contexts from this directory
+5. **Removing** a profile deletes its contexts from the Amazon Q directory
 
 ## 📖 Documentation
 
-- [Installation Guide](docs/installation.md)
-- [Development Setup](docs/development/setup.md)
-- [Custom Hooks Guide](docs/hooks.md)
-- Configuration Guide (coming soon)
-- Profile Management (coming soon)
-- MCP Server Setup (coming soon)
-- Troubleshooting (coming soon)
+For comprehensive documentation, install the documentation profile:
+
+```bash
+ai-config install documentation-v1
+```
+
+This provides detailed guides for:
+- Installation and setup
+- Configuration management
+- Profile creation
+- Development setup
+- MCP server configuration
+- Hooks and automation
 
 ## 🤝 Contributing
 
@@ -128,9 +145,11 @@ MIT License - see [LICENSE](LICENSE) for details.
 ## 🆘 Support
 
 - [GitHub Issues](https://github.com/your-org/ai-configurator/issues)
-- [Documentation](https://ai-configurator.readthedocs.io)
+- [Documentation Profile](ai-config install documentation-v1)
 - [Discussions](https://github.com/your-org/ai-configurator/discussions)
 
 ---
 
-**Status**: 🚧 Under Development - Alpha Release
+**Status**: ✅ Simplified and Ready for Use
+
+**Architecture**: Dramatically simplified from 37 core modules to 5, and 10+ CLI commands to 4 essential ones.

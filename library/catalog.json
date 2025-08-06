@@ -1,0 +1,47 @@
+{
+    "version": "1.0.0",
+    "profiles": [
+        {
+            "id": "default-v1",
+            "name": "Default Profile",
+            "description": "Basic profile configuration with minimal context for general use",
+            "version": "1.0.0",
+            "file_path": "default/profile.yaml"
+        },
+        {
+            "id": "developer-v1",
+            "name": "Developer Profile",
+            "description": "Complete profile for software developers with development guidelines and best practices",
+            "version": "1.0.0",
+            "file_path": "developer/profile.yaml"
+        },
+        {
+            "id": "document-helper-v1",
+            "name": "Document Helper Profile",
+            "description": "Profile for document helpers with guidelines for creating and managing documents effectively",
+            "version": "1.0.0",
+            "file_path": "document-helper/profile.yaml"
+        },
+        {
+            "id": "documentation-v1",
+            "name": "Documentation Profile",
+            "description": "Complete documentation profile for AI Configurator with installation guides, configuration examples, and development documentation",
+            "version": "1.0.0",
+            "file_path": "documentation/profile.yaml"
+        },
+        {
+            "id": "engagement-manager-v1",
+            "name": "Engagement Manager Profile",
+            "description": "Complete profile for engagement managers with client communication, project delivery, and management contexts",
+            "version": "1.0.0",
+            "file_path": "engagement-manager/profile.yaml"
+        },
+        {
+            "id": "solutions-architect-v1",
+            "name": "Solutions Architect Profile",
+            "description": "Complete profile for solutions architects with AWS best practices and architecture patterns",
+            "version": "1.0.0",
+            "file_path": "solutions-architect/profile.yaml"
+        }
+    ]
+}
