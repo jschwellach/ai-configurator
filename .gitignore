@@ -639,4 +639,6 @@ project/plugins/project/
 .dev/
 .development/
 dev-config/
-development-config/
+development-config/.ai-configurator/
+*.pyc
+__pycache__/
