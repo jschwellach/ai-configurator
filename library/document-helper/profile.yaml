@@ -1,7 +1,8 @@
 name: "Document Helper Profile"
-description: "Profile for document helpers with guidelines for creating and managing documents effectively"
+description: "Profile for document helpers with guidelines for creating and managing documents effectively, including workflow-guided document creation"
 version: "1.0.0"
 contexts:
   - "document-creation.md"
   - "document-editing.md"
-hooks: []
+hooks:
+  - "workflow_engine.py"

@@ -1,226 +1,301 @@
-# AI Configurator Refactoring Plan
+# Tasks: Workflow Engine Implementation
 
-## Current Problems Identified
+## Overview
+Implement an intelligent workflow engine that guides users through complex multi-phase processes using AI context injection and state management.
 
-### 1. **Dual Library Structure** 
-- **Problem**: Two separate library directories (`/library` and `/src/ai_configurator/library`)
-- **Impact**: Confusion during development, sync issues, complex build process
-- **Root Cause**: Package data management complexity
+---
 
-### 2. **Over-Complex Configuration Schema**
-- **Problem**: Catalog.json has unnecessary metadata (downloads, ratings, domains, personas, etc.)
-- **Impact**: Complex to maintain, most fields unused by AI
-- **Root Cause**: Over-engineering for features that aren't needed
+## Phase 1: Core Workflow Infrastructure
 
-### 3. **Excessive Core Modules** (38 files in `/core`)
-- **Problem**: Too many specialized classes and managers
-- **Impact**: Hard to understand, maintain, and debug
-- **Root Cause**: Over-abstraction and premature optimization
+### Task 1.1: Workflow State Management
+**Priority**: High | **Effort**: 3-4 hours
 
-### 4. **Complex Profile Structure**
-- **Problem**: Profile YAML files have too many fields and targets
-- **Impact**: Confusing for users to create new profiles
-- **Root Cause**: Trying to support too many use cases
+#### Subtasks:
+- [ ] **Create WorkflowStateManager class**
+  - Load/save state from `./.ai-configurator/{workflow}_state.yaml`
+  - Handle state creation, updates, and archival
+  - Ensure thread-safe file operations
+  
+- [ ] **Define state schema and validation**
+  - YAML schema for workflow state
+  - Validation for state transitions
+  - Error handling for corrupted state files
+  
+- [ ] **Implement state directory management**
+  - Auto-create `./.ai-configurator/` directory
+  - Create `archived/` subdirectory for completed workflows
+  - Handle permissions and file system errors
 
-## Refactoring Goals
+#### Acceptance Criteria:
+- State files are created/updated automatically
+- Only one active workflow per profile
+- Completed workflows are properly archived
+- State recovery works after interruptions
 
-1. **Simplicity**: Make it easy to add/manage profiles
-2. **Single Source of Truth**: One library location
-3. **Minimal Configuration**: Only essential fields
-4. **Clear Structure**: Intuitive file organization
-5. **Easy Development**: Simple to understand and extend
+---
 
-## Refactoring Tasks
+### Task 1.2: Workflow Definition System
+**Priority**: High | **Effort**: 4-5 hours
 
-### Phase 1: Simplify Library Structure ✅ COMPLETED
+#### Subtasks:
+- [ ] **Create WorkflowDefinition class**
+  - Load workflows from `library/{profile}/workflows/{name}.yaml`
+  - Parse and validate workflow YAML structure
+  - Provide workflow metadata and phase information
+  
+- [ ] **Define workflow YAML schema**
+  - Schema for phases, steps, artifacts, transitions
+  - Validation rules for workflow structure
+  - Support for templates and conditional logic
+  
+- [ ] **Implement workflow loader**
+  - Auto-discover workflows in profile directories
+  - Cache loaded workflows for performance
+  - Handle workflow versioning and updates
 
-#### Task 1.1: Consolidate Library Directories
-- [x] **Remove dual library structure** ✅ COMPLETED
-  - ✅ Keep only `/library` in project root
-  - ✅ Remove `/src/ai_configurator/library`
-  - ✅ Update library manager to always use project root `/library`
-  - ✅ Update build process to include library as package data
+#### Acceptance Criteria:
+- Workflows load automatically from profile directories
+- YAML validation prevents malformed workflows
+- Workflow metadata is accessible to hooks
+- Support for multiple workflows per profile
 
-#### Task 1.2: Simplify Catalog Schema
-- [x] **Reduce catalog.json complexity** ✅ COMPLETED
-  - ✅ Remove unnecessary fields: `downloads`, `rating`, `domains`, `personas`, `author`
-  - ✅ Keep only: `id`, `name`, `description`, `version`, `file_path`
-  - ✅ Remove nested category structure - flatten to simple array
-  - ✅ Update catalog schema and library manager
-  - ✅ Update library commands to work with simplified structure
+---
 
-#### Task 1.3: Simplify Profile YAML Structure
-- [x] **Reduce profile.yaml complexity** ✅ COMPLETED
-  - ✅ Remove unnecessary fields: `author`, `category`, `tags`, `targets`
-  - ✅ Keep only: `name`, `description`, `version`, `contexts`, `hooks`
-  - ✅ Assume single target (Amazon Q) by default
-  - ✅ Updated all profile.yaml files to simplified structure
+### Task 1.3: Hook System Replacement
+**Priority**: High | **Effort**: 5-6 hours
 
-### Phase 2: Simplify Core Architecture ✅ COMPLETED
+#### Subtasks:
+- [ ] **Create new WorkflowHook class**
+  - Replace existing hook system entirely
+  - Integrate with Q CLI context injection
+  - Handle workflow state reading and updating
+  
+- [ ] **Implement context injection logic**
+  - Read current workflow state
+  - Format workflow context for AI
+  - Inject phase guidance and next steps
+  
+- [ ] **Add state transition detection**
+  - Analyze user messages for progress indicators
+  - Update workflow state based on user actions
+  - Handle phase transitions and completions
 
-#### Task 2.1: Reduce Core Modules
-- [x] **Consolidate core functionality** ✅ COMPLETED
-  - ✅ Reduced from 37 files to 5 essential modules:
-    - `library_manager.py` - Main library operations
-    - `profile_installer.py` - Install/remove profiles  
-    - `file_utils.py` - Basic file operations
-    - `catalog_schema.py` - Data models
-    - `__init__.py` - Module exports
-  - ✅ Moved 33 non-essential modules to backup directory
-  - ✅ Updated CLI to work with simplified core
-  - ✅ Added install/remove/list commands to library CLI
+#### Acceptance Criteria:
+- Hook triggers on every AI message when profile is active
+- Workflow context is properly injected into AI conversation
+- State updates happen automatically based on user progress
+- Hook handles workflow completion and archival
 
-#### Task 2.2: Simplify Library Manager
-- [x] **Streamline LibraryManager class** ✅ COMPLETED (already done in Phase 1)
-  - ✅ Remove caching complexity (just read files directly)
-  - ✅ Remove performance optimizations (premature optimization)
-  - ✅ Remove progress callbacks (unnecessary for simple operations)
-  - ✅ Keep only: `list_profiles()`, `get_profile(id)`, `install_profile(id)`, `remove_profile(id)`
+---
 
-#### Task 2.3: Simplify Profile Installation
-- [x] **Streamline installation process** ✅ COMPLETED
-  - ✅ Remove dependency resolution (profiles should be self-contained)
-  - ✅ Remove backup/rollback (keep it simple)
-  - ✅ Simple copy operation: copy contexts to `~/.aws/amazonq/contexts/`
-  - ✅ No complex target management
+## Phase 2: Example Workflows
 
-### Phase 3: Simplify CLI Interface ✅ COMPLETED
+### Task 2.1: Document Creation Workflow
+**Priority**: Medium | **Effort**: 4-5 hours
 
-#### Task 3.1: Reduce CLI Commands
-- [x] **Keep only essential commands** ✅ COMPLETED
-  - ✅ `ai-config list` - List available profiles
-  - ✅ `ai-config install <profile-id>` - Install a profile
-  - ✅ `ai-config remove <profile-id>` - Remove a profile
-  - ✅ `ai-config info <profile-id>` - Show profile details
-  - ✅ Removed: `browse`, `search`, `refresh`, `stats`, `validate`, etc.
+#### Subtasks:
+- [ ] **Create amazon-narrative.yaml workflow**
+  - Define Planning, Creation, Refinement phases
+  - Add step-by-step guidance for each phase
+  - Include Amazon-specific templates and examples
+  
+- [ ] **Create PRFAQ workflow variant**
+  - PRFAQ-specific phases and guidance
+  - Templates for press release and FAQ sections
+  - Amazon PRFAQ best practices integration
+  
+- [ ] **Add document templates**
+  - Narrative document template
+  - PRFAQ template with standard sections
+  - Review checklists and quality criteria
 
-#### Task 3.2: Simplify Command Implementation
-- [x] **Streamline command files** ✅ COMPLETED
-  - ✅ Merged all commands into single `cli.py` file
-  - ✅ Removed complex command groups and subcommands
-  - ✅ Kept rich formatting for better user experience
-  - ✅ Maintained JSON output options for automation
+#### Acceptance Criteria:
+- Document workflows guide users through complete process
+- Templates are generated in project directory
+- Amazon-specific best practices are included
+- Workflows handle different document types
 
-### Phase 4: Simplify Project Structure ✅ COMPLETED
+---
 
-#### Task 4.1: Flatten Directory Structure
-- [x] **Reorganize project files** ✅ COMPLETED
-  - ✅ Moved `/src/ai_configurator/` to `/ai_configurator/`
-  - ✅ Kept library in `/library/`
-  - ✅ Removed unnecessary directories: `/examples`, `/docs`, `/contexts`, `/profiles`
+### Task 2.2: SDLC Workflow
+**Priority**: Medium | **Effort**: 4-5 hours
 
-#### Task 4.2: Reduce Configuration Files
-- [x] **Simplify build configuration** ✅ COMPLETED
-  - ✅ Updated `pyproject.toml` for flattened structure
-  - ✅ Updated `MANIFEST.in` for new structure
-  - ✅ Removed example and temporary files
-  - ✅ Updated `.gitignore` to match new structure
+#### Subtasks:
+- [ ] **Create sdlc-process.yaml workflow**
+  - Define Inception, Design, Construction, Implementation phases
+  - Add guidance for each development phase
+  - Include artifact generation for each phase
+  
+- [ ] **Create development templates**
+  - user_stories.md template
+  - technical_design.md template
+  - tasks.md template with task breakdown
+  
+- [ ] **Add development best practices**
+  - User story writing guidelines
+  - Technical design patterns
+  - Task estimation and planning guidance
 
-### Phase 5: Update Documentation
+#### Acceptance Criteria:
+- SDLC workflow covers complete development lifecycle
+- Artifacts are generated for each phase
+- Development best practices are integrated
+- Workflow adapts to different project types
 
-### Phase 5: Update Documentation ✅ COMPLETED
+---
 
-#### Task 5.1: Rewrite README
-- [x] **Create simple README** ✅ COMPLETED
-  - ✅ Focus on basic usage: install, list, remove
-  - ✅ Clear feature descriptions
-  - ✅ Simple examples and quick start
-  - ✅ Updated project structure
+## Phase 3: Integration and Enhancement
 
-#### Task 5.2: Create Documentation Profile
-- [x] **Add comprehensive documentation** ✅ COMPLETED
-  - ✅ Created `documentation-v1` profile in library
-  - ✅ Included installation, configuration, profiles guides
-  - ✅ Added development setup documentation
-  - ✅ Included MCP servers and hooks documentation
-  - ✅ Updated catalog.json with documentation profile
+### Task 3.1: Profile Integration
+**Priority**: Medium | **Effort**: 2-3 hours
 
-#### Task 5.3: Update Project Documentation
-- [x] **Ensure all documentation is accessible** ✅ COMPLETED
-  - ✅ Documentation available via `ai-config install documentation-v1`
-  - ✅ README provides clear overview and quick start
-  - ✅ CONTRIBUTING.md available for contributors
-  - ✅ All documentation contexts install to Amazon Q
+#### Subtasks:
+- [ ] **Update document-helper-v1 profile**
+  - Add workflows directory with document workflows
+  - Update profile.yaml to reference workflows
+  - Add workflow-specific contexts
+  
+- [ ] **Create developer-workflow-v1 profile**
+  - New profile specifically for SDLC workflows
+  - Include development-specific contexts
+  - Add programming language templates
+  
+- [ ] **Update ProfileInstaller**
+  - Install workflow files alongside contexts
+  - Handle workflow-enabled profiles
+  - Ensure backward compatibility
 
-## 🎉 ALL PHASES COMPLETED! 🎉
+#### Acceptance Criteria:
+- Existing profiles work with new workflow system
+- New workflow-enabled profiles install correctly
+- Backward compatibility maintained
+- Workflow files are properly installed
 
-### Summary of Achievements:
+---
 
-**Phase 1**: ✅ Simplified Library Structure
-- Unified library directory structure
-- Simplified catalog generation
-- Removed dual-directory complexity
+### Task 3.2: Error Handling and Recovery
+**Priority**: Medium | **Effort**: 2-3 hours
 
-**Phase 2**: ✅ Simplified Core Architecture  
-- Reduced from 37 core modules to 5 essential ones
-- Streamlined LibraryManager and ProfileInstaller
-- Simple file operations without over-engineering
+#### Subtasks:
+- [ ] **Add robust error handling**
+  - Handle corrupted state files
+  - Recover from interrupted workflows
+  - Provide clear error messages to users
+  
+- [ ] **Implement workflow recovery**
+  - Detect incomplete or corrupted workflows
+  - Offer recovery or restart options
+  - Preserve user work when possible
+  
+- [ ] **Add logging and debugging**
+  - Comprehensive logging for workflow operations
+  - Debug mode for troubleshooting
+  - Performance monitoring for state operations
 
-**Phase 3**: ✅ Simplified CLI Interface
-- Reduced to 4 essential commands
-- Flattened command structure (no more groups)
-- Updated documentation
+#### Acceptance Criteria:
+- System handles errors gracefully
+- Users can recover from interruptions
+- Clear error messages guide user actions
+- Debugging information is available
 
-**Phase 4**: ✅ Simplified Project Structure
-- Flattened directory structure (removed `/src/`)
-- Removed 8 unnecessary directories
-- Cleaned up project root
-- Updated configuration files
+---
 
-**Phase 5**: ✅ Updated Documentation
-- Comprehensive README with clear examples
-- Documentation profile with all guides
-- Easy access to documentation via CLI
+## Phase 4: Testing and Documentation
 
-### Final State:
-- **Core modules**: 5 files (down from 37) ✅
-- **CLI commands**: 4 commands (down from 10+) ✅
-- **Project directories**: 3 essential (down from 11+) ✅
-- **Documentation**: Comprehensive and accessible ✅
-- **Working functionality**: All features working perfectly ✅
+### Task 4.1: Testing Suite
+**Priority**: High | **Effort**: 3-4 hours
 
-**The project is now dramatically simplified and ready for production use!**
+#### Subtasks:
+- [ ] **Unit tests for workflow components**
+  - Test WorkflowStateManager operations
+  - Test WorkflowDefinition loading and validation
+  - Test hook integration and context injection
+  
+- [ ] **Integration tests**
+  - Test complete workflow execution
+  - Test state persistence across sessions
+  - Test profile installation with workflows
+  
+- [ ] **End-to-end testing**
+  - Test document creation workflow
+  - Test SDLC workflow
+  - Test error scenarios and recovery
+
+#### Acceptance Criteria:
+- All workflow components have unit tests
+- Integration tests cover main user flows
+- End-to-end tests validate complete workflows
+- Test coverage is >80%
+
+---
+
+### Task 4.2: Documentation and Examples
+**Priority**: Medium | **Effort**: 2-3 hours
+
+#### Subtasks:
+- [ ] **Update README with workflow features**
+  - Explain workflow engine capabilities
+  - Add workflow usage examples
+  - Update project structure documentation
+  
+- [ ] **Create workflow development guide**
+  - How to create new workflows
+  - YAML schema documentation
+  - Best practices for workflow design
+  
+- [ ] **Add example workflows**
+  - Complete working examples
+  - Template workflows for common use cases
+  - Community contribution guidelines
+
+#### Acceptance Criteria:
+- README explains workflow features clearly
+- Development guide enables workflow creation
+- Examples demonstrate workflow capabilities
+- Documentation is up-to-date and accurate
+
+---
 
 ## Implementation Order
 
-1. **Start with Phase 1** (Library Structure) - This fixes the immediate dual-directory issue
-2. **Then Phase 2** (Core Architecture) - This reduces complexity
-3. **Then Phase 3** (CLI Interface) - This simplifies user experience
-4. **Then Phase 4** (Project Structure) - This cleans up the project
-5. **Finally Phase 5** (Documentation) - This updates user-facing docs
+1. **Start with Task 1.1** (State Management) - Foundation for everything
+2. **Then Task 1.2** (Workflow Definitions) - Core workflow loading
+3. **Then Task 1.3** (Hook System) - Integration with AI
+4. **Then Task 2.1** (Document Workflow) - First working example
+5. **Then Task 3.1** (Profile Integration) - Make it usable
+6. **Then Task 2.2** (SDLC Workflow) - Second example
+7. **Finally Tasks 3.2, 4.1, 4.2** - Polish and documentation
 
 ## Success Criteria
 
-After refactoring, the project should:
-- [ ] Have single library directory
-- [ ] Have <10 core Python files (currently 38)
-- [ ] Have simple catalog.json with <5 fields per profile
-- [ ] Have simple profile.yaml with <5 fields
-- [ ] Allow adding new profile by just creating directory + YAML file
-- [ ] Have <5 CLI commands
-- [ ] Be understandable by new contributor in <30 minutes
+After implementation, the system should:
+- [ ] Guide users through complex multi-phase processes
+- [ ] Maintain state across AI conversation sessions
+- [ ] Provide contextual guidance based on current phase
+- [ ] Generate artifacts and templates automatically
+- [ ] Work seamlessly with existing profile system
+- [ ] Be extensible for new workflow types
 
 ## Risk Mitigation
 
 - [ ] Create backup branch before starting
-- [ ] Test each phase independently
-- [ ] Keep existing functionality working during transition
-- [ ] Update tests incrementally
-- [ ] Document breaking changes
+- [ ] Test each component independently
+- [ ] Maintain backward compatibility with existing profiles
+- [ ] Keep workflow YAML schema simple and extensible
+- [ ] Document breaking changes clearly
 
 ## Estimated Effort
 
-- **Phase 1**: 2-3 hours
-- **Phase 2**: 4-5 hours  
-- **Phase 3**: 2-3 hours
-- **Phase 4**: 1-2 hours
-- **Phase 5**: 1-2 hours
-- **Total**: 10-15 hours
+- **Phase 1**: 12-15 hours (Core Infrastructure)
+- **Phase 2**: 8-10 hours (Example Workflows)
+- **Phase 3**: 4-6 hours (Integration)
+- **Phase 4**: 5-7 hours (Testing & Documentation)
+- **Total**: 29-38 hours
 
 ## Next Steps
 
-1. Review and approve this plan
-2. Create backup branch
-3. Start with Task 1.1 (Consolidate Library Directories)
-4. Test each change incrementally
-5. Update tests as we go
+1. Review and approve this implementation plan
+2. Create feature branch for workflow engine
+3. Start with Task 1.1 (Workflow State Management)
+4. Test each component incrementally
+5. Update documentation as we build

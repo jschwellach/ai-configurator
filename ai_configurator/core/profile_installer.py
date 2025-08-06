@@ -63,15 +63,46 @@ class ProfileInstaller:
                 else:
                     self.logger.warning(f"Context file not found: {source_path}")
             
+            # Copy hooks and collect paths
+            hooks = profile_data.get('hooks', [])
+            hook_paths = []
+            amazonq_hooks_dir = Path.home() / ".aws" / "amazonq" / "hooks"
+            ensure_directory(amazonq_hooks_dir)
+            
+            for hook_file in hooks:
+                source_path = profile_dir / "hooks" / hook_file
+                if source_path.exists():
+                    dest_path = amazonq_hooks_dir / hook_file
+                    copy_file(source_path, dest_path)
+                    # Make hook executable
+                    dest_path.chmod(0o755)
+                    hook_paths.append(str(dest_path))
+                    self.logger.info(f"Copied hook: {hook_file}")
+                else:
+                    self.logger.warning(f"Hook file not found: {source_path}")
+            
             # Create Q CLI profile directory structure
             profile_name = profile_id.replace('-v1', '')  # Remove version suffix for cleaner profile name
             q_profile_dir = self.amazonq_profiles_dir / profile_name
             ensure_directory(q_profile_dir)
             
             # Create context.json file for Q CLI
+            hooks_config = {}
+            for hook_file in hooks:
+                hook_name = hook_file.replace('.py', '')  # Remove .py extension for hook name
+                hooks_config[hook_name] = {
+                    "trigger": "per_prompt",
+                    "type": "inline",
+                    "disabled": False,
+                    "timeout_ms": 30000,
+                    "max_output_size": 10240,
+                    "cache_ttl_seconds": 0,
+                    "command": str(amazonq_hooks_dir / hook_file)
+                }
+            
             context_json = {
                 "paths": context_paths,
-                "hooks": {}
+                "hooks": hooks_config
             }
             
             context_json_path = q_profile_dir / "context.json"
@@ -113,6 +144,16 @@ class ProfileInstaller:
                 if context_path.exists():
                     context_path.unlink()
                     self.logger.info(f"Removed context: {context_file}")
+            
+            # Remove hooks
+            hooks = profile_data.get('hooks', [])
+            amazonq_hooks_dir = Path.home() / ".aws" / "amazonq" / "hooks"
+            
+            for hook_file in hooks:
+                hook_path = amazonq_hooks_dir / hook_file
+                if hook_path.exists():
+                    hook_path.unlink()
+                    self.logger.info(f"Removed hook: {hook_file}")
             
             # Remove Q CLI profile directory
             profile_name = profile_id.replace('-v1', '')  # Remove version suffix
