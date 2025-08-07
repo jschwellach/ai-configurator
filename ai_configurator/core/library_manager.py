@@ -8,7 +8,7 @@ import time
 from pathlib import Path
 from typing import List, Optional
 
-from .catalog_schema import LibraryCatalog, ConfigItem
+from .catalog_schema import LibraryCatalog, ConfigItem, GlobalContext
 
 
 class LibraryManager:
@@ -110,6 +110,27 @@ class LibraryManager:
             
         return self.library_path / config.file_path
     
+    def get_global_contexts(self) -> List[GlobalContext]:
+        """Get all global contexts sorted by priority (highest first)."""
+        catalog = self.load_catalog()
+        if not catalog:
+            return []
+            
+        # Sort by priority (highest first), then by name for consistency
+        return sorted(catalog.global_contexts, key=lambda x: (-x.priority, x.name))
+    
+    def get_global_context_by_id(self, context_id: str) -> Optional[GlobalContext]:
+        """Get a global context by its ID."""
+        catalog = self.load_catalog()
+        if not catalog:
+            return None
+            
+        for context in catalog.global_contexts:
+            if context.id == context_id:
+                return context
+                
+        return None
+    
     def get_stats(self) -> dict:
         """Get library statistics."""
         catalog = self.load_catalog()
@@ -119,7 +140,8 @@ class LibraryManager:
         return {
             "total_configs": len(catalog.profiles),
             "version": catalog.version,
-            "profiles": len(catalog.profiles)
+            "profiles": len(catalog.profiles),
+            "global_contexts": len(catalog.global_contexts)
         }
     
     def shutdown(self):

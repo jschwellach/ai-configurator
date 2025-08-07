@@ -8,8 +8,9 @@ Simplify the setup and sharing of Amazon Q CLI configurations across teams and e
 
 ## ✨ Features
 
-- **Simple Commands**: Just 4 essential commands - list, install, remove, info
+- **Simple Commands**: Essential commands for profiles and global contexts
 - **Profile Management**: Switch between different work contexts easily
+- **Global Contexts**: Organization-wide contexts applied to all profiles
 - **Cross-Platform**: Works on Windows, macOS, and Linux
 - **Context Sharing**: Share knowledge bases and contexts across teams
 - **Safe Operations**: Simple installation to Amazon Q directory
@@ -54,12 +55,31 @@ ai-config remove developer-v1
 
 ## 📋 Commands
 
+### Profile Management
 ```bash
 ai-config list [--query QUERY]           # List available profiles
 ai-config install PROFILE_ID             # Install a profile
 ai-config remove PROFILE_ID              # Remove an installed profile
 ai-config info PROFILE_ID                # Show profile details
 ```
+
+### Global Contexts
+```bash
+ai-config list-global                    # List global contexts (applied to all profiles)
+ai-config info-global CONTEXT_ID         # Show global context details
+```
+
+All commands support `--format json` for programmatic use.
+
+## 🌍 Global Contexts
+
+Global contexts are automatically applied to all profiles and provide organization-wide knowledge:
+
+- **AWS Security Best Practices** - Security guidelines and best practices for AWS services
+- **Organizational Policies** - Company-wide policies and standards
+- **Common Abbreviations** - Standard terminology and abbreviations
+
+These contexts are automatically included when installing any profile, ensuring consistent organizational knowledge across all work contexts.
 
 ## 📚 Available Profiles
 
