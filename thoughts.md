@@ -102,3 +102,34 @@ This way they're only loaded via global_context.json references, not directly
 ✅ Comprehensive test coverage
 
 The global context implementation is now complete and working correctly!
+
+## NEW ISSUE: Global contexts persist after removal
+User ran `ai-config remove-global` but contexts are still showing up in `/context show`:
+- Files still appear in global context list
+- Amazon Q is still loading them despite removal command
+- Need to investigate why removal isn't working properly
+
+## Investigation needed:
+1. ✅ Check if global_context.json was properly updated
+2. ✅ Check if files actually exist in global-contexts folder
+3. ✅ Check if there's a caching issue
+4. ✅ Verify the remove-global command is working correctly
+
+## ROOT CAUSE FOUND:
+The catalog.json file was corrupted/reset and only contained the "Defaults" global context entry.
+The other 3 global context files existed but weren't in the catalog, so remove-global couldn't find them.
+
+## SOLUTION APPLIED:
+1. ✅ Restored complete catalog.json with all 4 global contexts
+2. ✅ Verified remove-global now works correctly
+3. ✅ Verified install-global works correctly
+4. ✅ All tests pass
+
+## FINAL STATUS:
+✅ Global context removal now works properly
+✅ All global contexts properly defined in catalog.json
+✅ Complete install/remove workflow functioning
+✅ No double-loading issues
+✅ Clean separation between global and profile contexts
+
+The global context system is now fully functional and working correctly!

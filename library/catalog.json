@@ -1,5 +1,39 @@
 {
     "version": "1.0.0",
+    "global_contexts": [
+        {
+            "id": "Defaults",
+            "name": "Defaults",
+            "description": "Defaults",
+            "version": "1.0.0",
+            "file_path": "global-contexts/defaults.md",
+            "priority": 1000
+        },
+        {
+            "id": "aws-security-best-practices",
+            "name": "AWS Security Best Practices",
+            "description": "Global security guidelines and best practices for AWS services",
+            "version": "1.0.0",
+            "file_path": "global-contexts/aws-security-best-practices.md",
+            "priority": 100
+        },
+        {
+            "id": "organizational-policies",
+            "name": "Organizational Policies",
+            "description": "Company-wide policies and standards that apply to all work",
+            "version": "1.0.0",
+            "file_path": "global-contexts/organizational-policies.md",
+            "priority": 90
+        },
+        {
+            "id": "common-abbreviations",
+            "name": "Common Abbreviations and Terminology",
+            "description": "Standard abbreviations and terminology used across the organization",
+            "version": "1.0.0",
+            "file_path": "global-contexts/common-abbreviations.md",
+            "priority": 10
+        }
+    ],
     "profiles": [
         {
             "id": "default-v1",
@@ -42,6 +76,13 @@
             "description": "Complete profile for solutions architects with AWS best practices and architecture patterns",
             "version": "1.0.0",
             "file_path": "solutions-architect/profile.yaml"
+        },
+        {
+            "id": "daily-assistant-v1",
+            "name": "Daily Assistant Profile",
+            "description": "Complete profile for daily assistant",
+            "version": "1.0.0",
+            "file_path": "daily-assistant/profile.yaml"
         }
     ]
 }
