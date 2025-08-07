@@ -28,9 +28,11 @@ class ProfileInstaller:
     def install_global_contexts(self) -> bool:
         """Install global contexts and create/update global_context.json."""
         try:
-            # Ensure Amazon Q directory exists
+            # Ensure Amazon Q directories exist
             amazonq_dir = Path.home() / ".aws" / "amazonq"
+            global_contexts_dir = amazonq_dir / "global-contexts"
             ensure_directory(amazonq_dir)
+            ensure_directory(global_contexts_dir)
             
             # Get global contexts sorted by priority (highest first)
             global_contexts = self.library_manager.get_global_contexts()
@@ -39,9 +41,9 @@ class ProfileInstaller:
             for global_context in global_contexts:
                 global_context_path = self.library_manager.library_path / global_context.file_path
                 if global_context_path.exists():
-                    # Copy to ~/.aws/amazonq/ with original filename (no global- prefix)
+                    # Copy to ~/.aws/amazonq/global-contexts/ with original filename
                     dest_filename = Path(global_context.file_path).name
-                    dest_path = amazonq_dir / dest_filename
+                    dest_path = global_contexts_dir / dest_filename
                     copy_file(global_context_path, dest_path)
                     global_context_paths.append(str(dest_path))
                     self.logger.info(f"Copied global context: {global_context.name}")
@@ -62,7 +64,10 @@ class ProfileInstaller:
             
             # Keep existing non-global-context paths and add global context paths
             existing_paths = existing_global_context.get("paths", [])
-            non_global_paths = [p for p in existing_paths if not any(Path(p).name == Path(gc.file_path).name for gc in global_contexts)]
+            # Filter out any existing global context paths (in case of reinstall)
+            global_filenames = {Path(gc.file_path).name for gc in global_contexts}
+            non_global_paths = [p for p in existing_paths 
+                              if not (Path(p).parent.name == "global-contexts" and Path(p).name in global_filenames)]
             
             # Combine non-global paths with new global context paths
             all_paths = non_global_paths + global_context_paths
@@ -238,18 +243,24 @@ class ProfileInstaller:
         """Remove global contexts and clean up global_context.json."""
         try:
             amazonq_dir = Path.home() / ".aws" / "amazonq"
+            global_contexts_dir = amazonq_dir / "global-contexts"
             global_context_json_path = amazonq_dir / "global_context.json"
             
             # Get global contexts to remove
             global_contexts = self.library_manager.get_global_contexts()
             
-            # Remove global context files
+            # Remove global context files from global-contexts folder
             for global_context in global_contexts:
                 dest_filename = Path(global_context.file_path).name
-                dest_path = amazonq_dir / dest_filename
+                dest_path = global_contexts_dir / dest_filename
                 if dest_path.exists():
                     dest_path.unlink()
                     self.logger.info(f"Removed global context: {global_context.name}")
+            
+            # Remove the global-contexts directory if it's empty
+            if global_contexts_dir.exists() and not any(global_contexts_dir.iterdir()):
+                global_contexts_dir.rmdir()
+                self.logger.info("Removed empty global-contexts directory")
             
             # Update global_context.json to remove global context paths
             if global_context_json_path.exists():
@@ -259,7 +270,9 @@ class ProfileInstaller:
                     
                     # Keep only non-global-context paths
                     existing_paths = existing_global_context.get("paths", [])
-                    non_global_paths = [p for p in existing_paths if not any(Path(p).name == Path(gc.file_path).name for gc in global_contexts)]
+                    global_filenames = {Path(gc.file_path).name for gc in global_contexts}
+                    non_global_paths = [p for p in existing_paths 
+                                      if not (Path(p).parent.name == "global-contexts" and Path(p).name in global_filenames)]
                     
                     updated_config = {
                         "paths": non_global_paths,

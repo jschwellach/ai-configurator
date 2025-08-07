@@ -70,3 +70,35 @@ The current code treats global contexts as profile-specific contexts, copying th
 - ✅ Non-global paths are preserved in global_context.json
 
 ### The fix is complete and working correctly!
+
+## NEW ISSUE DISCOVERED:
+Global contexts are being loaded TWICE because:
+1. They're placed directly in ~/.aws/amazonq/ 
+2. They're also referenced in global_context.json
+3. Amazon Q loads both locations, causing duplication
+
+## SOLUTION NEEDED:
+Need to create a separate folder ~/.aws/amazonq/global-contexts/ for the global context files
+This way they're only loaded via global_context.json references, not directly
+
+## Next steps:
+1. ✅ Modify install_global_contexts() to use ~/.aws/amazonq/global-contexts/ folder
+2. ✅ Update paths in global_context.json to point to the new location
+3. ✅ Update remove_global_contexts() to clean up the correct folder
+4. ✅ Test to ensure no double-loading
+
+## DOUBLE-LOADING ISSUE FIXED:
+- Global contexts now stored in ~/.aws/amazonq/global-contexts/ folder
+- Only loaded via global_context.json references, not directly from root directory
+- No more double-loading of global contexts
+- Empty global-contexts directory is cleaned up on removal
+- All tests pass confirming the fix works correctly
+
+## Final Implementation Status:
+✅ Global contexts properly separated from profile contexts
+✅ No duplication per profile installation  
+✅ Proper folder structure prevents double-loading
+✅ Clean removal and installation processes
+✅ Comprehensive test coverage
+
+The global context implementation is now complete and working correctly!
