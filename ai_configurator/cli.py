@@ -190,6 +190,127 @@ def show_info(profile_id: str, format: str) -> None:
         library_manager.shutdown()
 
 
+@cli.command("list-global")
+@click.option("--format", "-f", type=click.Choice(["table", "json"]), default="table", help="Output format")
+def list_global_contexts(format: str) -> None:
+    """List available global contexts."""
+    library_manager = LibraryManager()
+    
+    try:
+        contexts = library_manager.get_global_contexts()
+        
+        if not contexts:
+            console.print("No global contexts found.")
+            return
+        
+        if format == "json":
+            contexts_data = [
+                {
+                    "id": context.id,
+                    "name": context.name,
+                    "description": context.description,
+                    "version": context.version,
+                    "priority": context.priority
+                }
+                for context in contexts
+            ]
+            console.print(json.dumps(contexts_data, indent=2))
+        else:
+            table = Table(title="Global Contexts (Applied to All Profiles)")
+            table.add_column("Name", style="cyan", width=30)
+            table.add_column("ID", style="blue", width=25)
+            table.add_column("Priority", style="green", width=8)
+            table.add_column("Version", style="green", width=8)
+            table.add_column("Description", style="white", width=40)
+            
+            for context in contexts:
+                table.add_row(
+                    context.name,
+                    context.id,
+                    str(context.priority),
+                    context.version,
+                    context.description[:37] + "..." if len(context.description) > 40 else context.description
+                )
+            
+            console.print(table)
+            console.print(f"\nFound {len(contexts)} global contexts")
+            console.print("[dim]Global contexts are automatically included when installing any profile.[/dim]")
+    
+    finally:
+        library_manager.shutdown()
+
+
+@cli.command("info-global")
+@click.argument("context_id")
+@click.option("--format", "-f", type=click.Choice(["panel", "json"]), default="panel", help="Output format")
+def show_global_context_info(context_id: str, format: str) -> None:
+    """Show detailed information about a global context."""
+    library_manager = LibraryManager()
+    
+    try:
+        context = library_manager.get_global_context_by_id(context_id)
+        
+        if not context:
+            console.print(f"[red]Global context '{context_id}' not found.[/red]")
+            return
+        
+        if format == "json":
+            context_data = {
+                "id": context.id,
+                "name": context.name,
+                "description": context.description,
+                "version": context.version,
+                "priority": context.priority,
+                "file_path": context.file_path
+            }
+            console.print(json.dumps(context_data, indent=2))
+        else:
+            console.print(Panel(f"[bold cyan]{context.name}[/bold cyan] - Priority: {context.priority}", title="Global Context", border_style="cyan"))
+            console.print(f"[bold]ID:[/bold] {context.id}")
+            console.print(f"[bold]Version:[/bold] {context.version}")
+            console.print(f"[bold]File Path:[/bold] {context.file_path}")
+            console.print(Panel(context.description, title="Description", border_style="green"))
+            console.print("\n[dim]This context is automatically applied to all profiles when installed.[/dim]")
+    
+    finally:
+        library_manager.shutdown()
+
+
+@cli.command("install-global")
+def install_global_contexts() -> None:
+    """Install global contexts and create/update global_context.json."""
+    from .core.profile_installer import ProfileInstaller
+    
+    installer = ProfileInstaller()
+    
+    with console.status("[bold green]Installing global contexts..."):
+        success = installer.install_global_contexts()
+    
+    if success:
+        console.print("[green]✓[/green] Global contexts installed successfully")
+        console.print("[dim]Global contexts are now available for all Amazon Q profiles[/dim]")
+    else:
+        console.print("[red]✗[/red] Failed to install global contexts")
+
+
+@cli.command("remove-global")
+@click.confirmation_option(prompt="Are you sure you want to remove all global contexts?")
+def remove_global_contexts() -> None:
+    """Remove global contexts and clean up global_context.json."""
+    from .core.profile_installer import ProfileInstaller
+    
+    installer = ProfileInstaller()
+    
+    with console.status("[bold yellow]Removing global contexts..."):
+        success = installer.remove_global_contexts()
+    
+    if success:
+        console.print("[green]✓[/green] Global contexts removed successfully")
+        console.print("[dim]Global contexts are no longer available for Amazon Q profiles[/dim]")
+    else:
+        console.print("[red]✗[/red] Failed to remove global contexts")
+
+
 def main():
     """Main entry point for the CLI."""
     cli()

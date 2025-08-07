@@ -25,6 +25,63 @@ class ProfileInstaller:
         self.amazonq_contexts_dir = Path.home() / ".aws" / "amazonq" / "contexts"
         self.amazonq_profiles_dir = Path.home() / ".aws" / "amazonq" / "profiles"
         
+    def install_global_contexts(self) -> bool:
+        """Install global contexts and create/update global_context.json."""
+        try:
+            # Ensure Amazon Q directory exists
+            amazonq_dir = Path.home() / ".aws" / "amazonq"
+            ensure_directory(amazonq_dir)
+            
+            # Get global contexts sorted by priority (highest first)
+            global_contexts = self.library_manager.get_global_contexts()
+            global_context_paths = []
+            
+            for global_context in global_contexts:
+                global_context_path = self.library_manager.library_path / global_context.file_path
+                if global_context_path.exists():
+                    # Copy to ~/.aws/amazonq/ with original filename (no global- prefix)
+                    dest_filename = Path(global_context.file_path).name
+                    dest_path = amazonq_dir / dest_filename
+                    copy_file(global_context_path, dest_path)
+                    global_context_paths.append(str(dest_path))
+                    self.logger.info(f"Copied global context: {global_context.name}")
+                else:
+                    self.logger.warning(f"Global context file not found: {global_context_path}")
+            
+            # Create/update global_context.json
+            global_context_json_path = amazonq_dir / "global_context.json"
+            
+            # Load existing global_context.json if it exists
+            existing_global_context = {"paths": [], "hooks": {}}
+            if global_context_json_path.exists():
+                try:
+                    with open(global_context_json_path, 'r', encoding='utf-8') as f:
+                        existing_global_context = json.load(f)
+                except Exception as e:
+                    self.logger.warning(f"Failed to load existing global_context.json: {e}")
+            
+            # Keep existing non-global-context paths and add global context paths
+            existing_paths = existing_global_context.get("paths", [])
+            non_global_paths = [p for p in existing_paths if not any(Path(p).name == Path(gc.file_path).name for gc in global_contexts)]
+            
+            # Combine non-global paths with new global context paths
+            all_paths = non_global_paths + global_context_paths
+            
+            global_context_config = {
+                "paths": all_paths,
+                "hooks": existing_global_context.get("hooks", {})
+            }
+            
+            with open(global_context_json_path, 'w', encoding='utf-8') as f:
+                json.dump(global_context_config, f, indent=2)
+            
+            self.logger.info(f"Updated global_context.json with {len(global_context_paths)} global contexts")
+            return True
+            
+        except Exception as e:
+            self.logger.error(f"Error installing global contexts: {e}")
+            return False
+
     def install_profile(self, profile_id: str) -> bool:
         """Install a profile by copying its contexts and creating Q CLI profile structure."""
         try:
@@ -48,10 +105,14 @@ class ProfileInstaller:
             ensure_directory(self.amazonq_contexts_dir)
             ensure_directory(self.amazonq_profiles_dir)
             
-            # Copy contexts and collect paths
+            # Install global contexts first (this updates global_context.json)
+            if not self.install_global_contexts():
+                self.logger.warning("Failed to install global contexts, continuing with profile installation")
+            
+            # Copy profile-specific contexts only
+            context_paths = []
             contexts = profile_data.get('contexts', [])
             profile_dir = profile_path.parent
-            context_paths = []
             
             for context_file in contexts:
                 source_path = profile_dir / "contexts" / context_file
@@ -86,7 +147,7 @@ class ProfileInstaller:
             q_profile_dir = self.amazonq_profiles_dir / profile_name
             ensure_directory(q_profile_dir)
             
-            # Create context.json file for Q CLI
+            # Create context.json file for Q CLI (profile-specific contexts only)
             hooks_config = {}
             for hook_file in hooks:
                 hook_name = hook_file.replace('.py', '')  # Remove .py extension for hook name
@@ -100,6 +161,7 @@ class ProfileInstaller:
                     "command": str(amazonq_hooks_dir / hook_file)
                 }
             
+            # Only include profile-specific contexts, not global contexts
             context_json = {
                 "paths": context_paths,
                 "hooks": hooks_config
@@ -136,7 +198,10 @@ class ProfileInstaller:
             with open(profile_path, 'r', encoding='utf-8') as f:
                 profile_data = yaml.safe_load(f)
                 
-            # Remove contexts
+            # NOTE: Do NOT remove global contexts - they are shared across all profiles
+            # Global contexts are managed separately via install_global_contexts()
+            
+            # Remove profile-specific contexts only
             contexts = profile_data.get('contexts', [])
             
             for context_file in contexts:
@@ -169,6 +234,52 @@ class ProfileInstaller:
             self.logger.error(f"Error removing profile '{profile_id}': {e}")
             return False
     
+    def remove_global_contexts(self) -> bool:
+        """Remove global contexts and clean up global_context.json."""
+        try:
+            amazonq_dir = Path.home() / ".aws" / "amazonq"
+            global_context_json_path = amazonq_dir / "global_context.json"
+            
+            # Get global contexts to remove
+            global_contexts = self.library_manager.get_global_contexts()
+            
+            # Remove global context files
+            for global_context in global_contexts:
+                dest_filename = Path(global_context.file_path).name
+                dest_path = amazonq_dir / dest_filename
+                if dest_path.exists():
+                    dest_path.unlink()
+                    self.logger.info(f"Removed global context: {global_context.name}")
+            
+            # Update global_context.json to remove global context paths
+            if global_context_json_path.exists():
+                try:
+                    with open(global_context_json_path, 'r', encoding='utf-8') as f:
+                        existing_global_context = json.load(f)
+                    
+                    # Keep only non-global-context paths
+                    existing_paths = existing_global_context.get("paths", [])
+                    non_global_paths = [p for p in existing_paths if not any(Path(p).name == Path(gc.file_path).name for gc in global_contexts)]
+                    
+                    updated_config = {
+                        "paths": non_global_paths,
+                        "hooks": existing_global_context.get("hooks", {})
+                    }
+                    
+                    with open(global_context_json_path, 'w', encoding='utf-8') as f:
+                        json.dump(updated_config, f, indent=2)
+                    
+                    self.logger.info("Updated global_context.json to remove global context paths")
+                    
+                except Exception as e:
+                    self.logger.warning(f"Failed to update global_context.json: {e}")
+            
+            return True
+            
+        except Exception as e:
+            self.logger.error(f"Error removing global contexts: {e}")
+            return False
+
     def is_profile_installed(self, profile_id: str) -> bool:
         """Check if a profile is installed by looking for Q CLI profile directory."""
         profile_name = profile_id.replace('-v1', '')  # Remove version suffix
