@@ -1,0 +1,6 @@
+name: "System Administrator Profile"
+description: "Complete profile for sytem administrators"
+version: "1.0.0"
+contexts:
+  - "system-administrator.md"
+hooks: []
