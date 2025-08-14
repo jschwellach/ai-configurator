@@ -1,0 +1,207 @@
+name: "environment-setup"
+description: "Initialize and configure development environment"
+version: "1.0"
+type: "automation"
+trigger: "on_session_start"
+timeout: 300
+enabled: true
+
+# Configuration for environment setup
+config:
+  # Setup phases to execute
+  phases:
+    - "detect_environment"
+    - "install_dependencies"
+    - "configure_tools"
+    - "setup_workspace"
+    - "validate_setup"
+
+  # Environment detection patterns
+  environment_detection:
+    python:
+      indicators:
+        - "requirements.txt"
+        - "pyproject.toml"
+        - "setup.py"
+        - "Pipfile"
+        - "environment.yml"
+      versions: ["3.8", "3.9", "3.10", "3.11", "3.12"]
+
+    node:
+      indicators:
+        - "package.json"
+        - "yarn.lock"
+        - "package-lock.json"
+        - "pnpm-lock.yaml"
+      versions: ["16", "18", "20", "21"]
+
+    java:
+      indicators:
+        - "pom.xml"
+        - "build.gradle"
+        - "build.gradle.kts"
+      versions: ["11", "17", "21"]
+
+    go:
+      indicators:
+        - "go.mod"
+        - "go.sum"
+      versions: ["1.19", "1.20", "1.21"]
+
+    rust:
+      indicators:
+        - "Cargo.toml"
+        - "Cargo.lock"
+      versions: ["1.70", "1.75"]
+
+    docker:
+      indicators:
+        - "Dockerfile"
+        - "docker-compose.yml"
+        - "docker-compose.yaml"
+        - ".dockerignore"
+
+  # Platform-specific configurations
+  platforms:
+    linux:
+      package_managers: ["apt", "yum", "dnf", "pacman", "zypper"]
+      shell: "bash"
+      python_command: "python3"
+      pip_command: "pip3"
+
+    darwin: # macOS
+      package_managers: ["brew", "port"]
+      shell: "zsh"
+      python_command: "python3"
+      pip_command: "pip3"
+
+    windows:
+      package_managers: ["choco", "scoop", "winget"]
+      shell: "powershell"
+      python_command: "python"
+      pip_command: "pip"
+
+  # Tool configurations
+  tools:
+    git:
+      required: true
+      config:
+        - "user.name"
+        - "user.email"
+        - "init.defaultBranch"
+
+    docker:
+      required: false
+      services:
+        - "docker"
+        - "docker-compose"
+
+    editors:
+      vscode:
+        extensions:
+          - "ms-python.python"
+          - "ms-vscode.vscode-typescript-next"
+          - "rust-lang.rust-analyzer"
+          - "golang.go"
+
+      vim:
+        plugins:
+          - "vim-plug"
+          - "coc.nvim"
+
+  # Workspace setup
+  workspace:
+    directories:
+      - "src"
+      - "tests"
+      - "docs"
+      - "scripts"
+      - ".vscode"
+
+    files:
+      - ".gitignore"
+      - "README.md"
+      - ".editorconfig"
+
+    templates:
+      gitignore: "templates/gitignore"
+      readme: "templates/README.md"
+      editorconfig: "templates/.editorconfig"
+
+# Execution script
+script: "environment_setup.py"
+
+# Conditions for when this hook should run
+conditions:
+  - trigger_type: "session_start"
+    project_indicators: ["requirements.txt", "package.json", "pom.xml", "go.mod", "Cargo.toml"]
+  - exclude_paths: [".git", "node_modules", "__pycache__", "target", "dist", "build"]
+
+# Context sources for setup guidelines
+context:
+  sources:
+    - "contexts/domains/development-guidelines.md"
+    - "contexts/domains/devops-methodologies.md"
+  tags: ["environment", "setup", "automation", "development"]
+  priority: 1
+
+# Integration settings
+integrations:
+  shell:
+    update_profile: true
+    add_aliases: true
+
+  ide:
+    configure_settings: true
+    install_extensions: true
+
+  version_control:
+    initialize_repo: false
+    setup_hooks: true
+
+# Validation checks
+validation:
+  commands:
+    - "python --version"
+    - "node --version"
+    - "git --version"
+    - "docker --version"
+
+  environment_variables:
+    - "PATH"
+    - "PYTHON_PATH"
+    - "NODE_PATH"
+
+  directories:
+    - "src"
+    - "tests"
+
+  files:
+    - ".gitignore"
+    - "README.md"
+
+# Metadata
+metadata:
+  author: "AI Configurator Team"
+  category: "automation"
+  complexity: "high"
+  prerequisites:
+    - "Administrative privileges (for package installation)"
+    - "Internet connection"
+  related_hooks:
+    - "auto-documentation"
+    - "code-quality-check"
+  documentation:
+    setup_guide: "docs/hooks/environment-setup.md"
+    platform_notes: "docs/hooks/platform-specific-setup.md"
+    troubleshooting: "docs/hooks/environment-troubleshooting.md"
+
+  # Backup and rollback
+  backup:
+    enabled: true
+    location: ".kiro/backups/environment"
+    retention_days: 30
+
+  rollback:
+    enabled: true
+    create_restore_point: true

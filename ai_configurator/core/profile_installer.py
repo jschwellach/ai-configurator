@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Optional, List
 
 from .library_manager import LibraryManager
+from .catalog_schema import AgentConfig
 from .file_utils import ensure_directory, copy_file
 
 
@@ -23,7 +24,7 @@ class ProfileInstaller:
         
         # Default Amazon Q directories
         self.amazonq_contexts_dir = Path.home() / ".aws" / "amazonq" / "contexts"
-        self.amazonq_profiles_dir = Path.home() / ".aws" / "amazonq" / "profiles"
+        self.amazonq_agents_dir = Path.home() / ".aws" / "amazonq" / "cli-agents"
         
     def install_global_contexts(self) -> bool:
         """Install global contexts and create/update global_context.json."""
@@ -88,7 +89,7 @@ class ProfileInstaller:
             return False
 
     def install_profile(self, profile_id: str) -> bool:
-        """Install a profile by copying its contexts and creating Q CLI profile structure."""
+        """Install a profile by copying its contexts and creating Q CLI agent configuration."""
         try:
             # Get profile configuration
             config = self.library_manager.get_configuration_by_id(profile_id)
@@ -108,75 +109,49 @@ class ProfileInstaller:
                 
             # Ensure Amazon Q directories exist
             ensure_directory(self.amazonq_contexts_dir)
-            ensure_directory(self.amazonq_profiles_dir)
+            ensure_directory(self.amazonq_agents_dir)
             
-            # Install global contexts first (this updates global_context.json)
+            # Install global contexts first
             if not self.install_global_contexts():
                 self.logger.warning("Failed to install global contexts, continuing with profile installation")
             
-            # Copy profile-specific contexts only
-            context_paths = []
+            # Copy profile-specific contexts
+            context_resources = []
             contexts = profile_data.get('contexts', [])
             profile_dir = profile_path.parent
             
             for context_file in contexts:
                 source_path = profile_dir / "contexts" / context_file
                 if source_path.exists():
-                    dest_path = self.amazonq_contexts_dir / context_file
+                    dest_path = self.amazonq_contexts_dir / f"{profile_id}_{context_file}"
                     copy_file(source_path, dest_path)
-                    context_paths.append(str(dest_path))
+                    context_resources.append(f"file://{dest_path}")
                     self.logger.info(f"Copied context: {context_file}")
                 else:
                     self.logger.warning(f"Context file not found: {source_path}")
             
-            # Copy hooks and collect paths
-            hooks = profile_data.get('hooks', [])
-            hook_paths = []
-            amazonq_hooks_dir = Path.home() / ".aws" / "amazonq" / "hooks"
-            ensure_directory(amazonq_hooks_dir)
+            # Add global contexts to resources
+            global_contexts = self.library_manager.get_global_contexts()
+            global_contexts_dir = Path.home() / ".aws" / "amazonq" / "global-contexts"
+            for global_context in global_contexts:
+                dest_filename = Path(global_context.file_path).name
+                dest_path = global_contexts_dir / dest_filename
+                if dest_path.exists():
+                    context_resources.append(f"file://{dest_path}")
             
-            for hook_file in hooks:
-                source_path = profile_dir / "hooks" / hook_file
-                if source_path.exists():
-                    dest_path = amazonq_hooks_dir / hook_file
-                    copy_file(source_path, dest_path)
-                    # Make hook executable
-                    dest_path.chmod(0o755)
-                    hook_paths.append(str(dest_path))
-                    self.logger.info(f"Copied hook: {hook_file}")
-                else:
-                    self.logger.warning(f"Hook file not found: {source_path}")
+            # Create agent configuration
+            agent_config = AgentConfig(
+                name=profile_id,
+                description=config.description,
+                resources=context_resources
+            )
             
-            # Create Q CLI profile directory structure
-            profile_name = profile_id.replace('-v1', '')  # Remove version suffix for cleaner profile name
-            q_profile_dir = self.amazonq_profiles_dir / profile_name
-            ensure_directory(q_profile_dir)
+            # Save agent JSON
+            agent_json_path = self.amazonq_agents_dir / f"{profile_id}.json"
+            with open(agent_json_path, 'w', encoding='utf-8') as f:
+                json.dump(agent_config.dict(by_alias=True), f, indent=2)
             
-            # Create context.json file for Q CLI (profile-specific contexts only)
-            hooks_config = {}
-            for hook_file in hooks:
-                hook_name = hook_file.replace('.py', '')  # Remove .py extension for hook name
-                hooks_config[hook_name] = {
-                    "trigger": "per_prompt",
-                    "type": "inline",
-                    "disabled": False,
-                    "timeout_ms": 30000,
-                    "max_output_size": 10240,
-                    "cache_ttl_seconds": 0,
-                    "command": str(amazonq_hooks_dir / hook_file)
-                }
-            
-            # Only include profile-specific contexts, not global contexts
-            context_json = {
-                "paths": context_paths,
-                "hooks": hooks_config
-            }
-            
-            context_json_path = q_profile_dir / "context.json"
-            with open(context_json_path, 'w', encoding='utf-8') as f:
-                json.dump(context_json, f, indent=2)
-            
-            self.logger.info(f"Created Q CLI profile: {profile_name}")
+            self.logger.info(f"Created Q CLI agent: {profile_id}")
             self.logger.info(f"Successfully installed profile: {config.name}")
             return True
             
@@ -185,7 +160,7 @@ class ProfileInstaller:
             return False
     
     def remove_profile(self, profile_id: str) -> bool:
-        """Remove a profile by deleting its contexts and Q CLI profile directory."""
+        """Remove a profile by deleting its contexts and Q CLI agent configuration."""
         try:
             # Get profile configuration
             config = self.library_manager.get_configuration_by_id(profile_id)
@@ -203,34 +178,20 @@ class ProfileInstaller:
             with open(profile_path, 'r', encoding='utf-8') as f:
                 profile_data = yaml.safe_load(f)
                 
-            # NOTE: Do NOT remove global contexts - they are shared across all profiles
-            # Global contexts are managed separately via install_global_contexts()
-            
-            # Remove profile-specific contexts only
+            # Remove profile-specific contexts
             contexts = profile_data.get('contexts', [])
             
             for context_file in contexts:
-                context_path = self.amazonq_contexts_dir / context_file
+                context_path = self.amazonq_contexts_dir / f"{profile_id}_{context_file}"
                 if context_path.exists():
                     context_path.unlink()
                     self.logger.info(f"Removed context: {context_file}")
             
-            # Remove hooks
-            hooks = profile_data.get('hooks', [])
-            amazonq_hooks_dir = Path.home() / ".aws" / "amazonq" / "hooks"
-            
-            for hook_file in hooks:
-                hook_path = amazonq_hooks_dir / hook_file
-                if hook_path.exists():
-                    hook_path.unlink()
-                    self.logger.info(f"Removed hook: {hook_file}")
-            
-            # Remove Q CLI profile directory
-            profile_name = profile_id.replace('-v1', '')  # Remove version suffix
-            q_profile_dir = self.amazonq_profiles_dir / profile_name
-            if q_profile_dir.exists():
-                shutil.rmtree(q_profile_dir)
-                self.logger.info(f"Removed Q CLI profile directory: {profile_name}")
+            # Remove agent JSON
+            agent_json_path = self.amazonq_agents_dir / f"{profile_id}.json"
+            if agent_json_path.exists():
+                agent_json_path.unlink()
+                self.logger.info(f"Removed Q CLI agent: {profile_id}")
             
             self.logger.info(f"Successfully removed profile: {config.name}")
             return True
@@ -294,20 +255,19 @@ class ProfileInstaller:
             return False
 
     def is_profile_installed(self, profile_id: str) -> bool:
-        """Check if a profile is installed by looking for Q CLI profile directory."""
-        profile_name = profile_id.replace('-v1', '')  # Remove version suffix
-        q_profile_dir = self.amazonq_profiles_dir / profile_name
-        context_json_path = q_profile_dir / "context.json"
-        return context_json_path.exists()
+        """Check if a profile is installed by looking for Q CLI agent JSON."""
+        agent_json_path = self.amazonq_agents_dir / f"{profile_id}.json"
+        return agent_json_path.exists()
     
     def list_installed_profiles(self) -> List[str]:
         """List all installed profiles."""
-        if not self.amazonq_profiles_dir.exists():
+        if not self.amazonq_agents_dir.exists():
             return []
             
         installed = []
-        for marker_file in self.amazonq_profiles_dir.glob("*.installed"):
-            profile_id = marker_file.stem
-            installed.append(profile_id)
+        for agent_file in self.amazonq_agents_dir.glob("*.json"):
+            if agent_file.name != "agent_config.json.example":  # Skip example file
+                profile_id = agent_file.stem
+                installed.append(profile_id)
             
         return installed

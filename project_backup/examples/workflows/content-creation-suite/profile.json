@@ -1,0 +1,250 @@
+ail_platforms"
+],
+"metrics": [
+"page_views",
+"engagement_rate",
+"social_shares",
+"email_opens",
+"conversion_rate",
+"time_on_page"
+],
+"reporting": {
+"frequency": "weekly",
+"format": "dashboard",
+"output_directory": "reports/analytics/"
+},
+"alerts": {
+"performance_drops": true,
+"viral_content": true,
+"engagement_spikes": true
+}
+}
+},
+// Content research assistant
+"content-research": {
+"enabled": true,
+"description": "Automated content research and topic suggestion based on trends and audience",
+"trigger": "manual",
+"config": {
+"research_sources": [
+"google_trends",
+"social_media_trends",
+"competitor_analysis",
+"keyword_research"
+],
+"topic_generation": {
+"based_on_performance": true,
+"seasonal_trends": true,
+"audience_interests": true,
+"content_gaps": true
+},
+"research_output": "research/",
+"content_calendar_integration": true,
+"suggestion_frequency": "weekly"
+}
+},
+// Content collaboration manager
+"content-collaboration": {
+"enabled": true,
+"description": "Manage content collaboration workflows including reviews and approvals",
+"trigger": "on_content_ready",
+"config": {
+"workflow_stages": [
+"draft",
+"review",
+"editing",
+"approval",
+"published"
+],
+"review_assignments": {
+"technical_review": "subject_matter_expert",
+"editorial_review": "editor",
+"final_approval": "content_manager"
+},
+"notification_channels": [
+"email",
+"slack",
+"project_management_tool"
+],
+"deadline_tracking": true,
+"version_control": true
+}
+},
+// Content template generator
+"content-templates": {
+"enabled": true,
+"description": "Generate content templates and boilerplates for different content types",
+"trigger": "manual",
+"config": {
+"template_types": [
+"blog_post",
+"technical_article",
+"case_study",
+"white_paper",
+"social_media_post",
+"email_newsletter",
+"product_documentation",
+"press_release"
+],
+"customization_options": {
+"brand_voice": true,
+"target_audience": true,
+"content_goals": true,
+"seo_requirements": true
+},
+"template_directory": "templates/content/",
+"auto_populate": true
+}
+},
+// Content backup and versioning
+"content-backup": {
+"enabled": true,
+"description": "Automated backup and version control for all content assets",
+"trigger": "on_file_change",
+"config": {
+"backup_locations": [
+"cloud_storage",
+"git_repository",
+"local_backup"
+],
+"version_control": {
+"auto_commit": true,
+"commit_messages": "auto_generated",
+"branch_strategy": "feature_branches"
+},
+"backup_frequency": "real_time",
+"retention_policy": "90_days",
+"recovery_testing": "monthly"
+}
+}
+},
+// SETTINGS SECTION
+// ============================================================================
+// Optimized settings for complete content creation workflow
+// ============================================================================
+"settings": {
+// Auto-reload contexts when files change
+"auto_reload": true,
+// Higher context limit for comprehensive content creation
+"max_contexts": 200,
+// Validate all contexts
+"validate_contexts": true,
+// Detailed logging for content creation feedback
+"log_level": "info",
+// Content creation workflow specific settings
+"content_creation_settings": {
+// Default content directory
+"content_directory": "content/",
+// Default drafts directory
+"drafts_directory": "drafts/",
+// Default templates directory
+"templates_directory": "templates/",
+// Default media directory
+"media_directory": "media/",
+// Default reports directory
+"reports_directory": "reports/",
+// Preferred markup format
+"markup_format": "markdown",
+// Auto-save frequency (minutes)
+"auto_save_frequency": 5,
+// Default content license
+"default_license": "CC BY 4.0",
+// Content workflow settings
+"workflow_settings": {
+"require_review": true,
+"auto_publish": false,
+"schedule_posts": true,
+"track_performance": true
+},
+// Quality settings
+"quality_settings": {
+"grammar_check": true,
+"style_check": true,
+"readability_check": true,
+"seo_check": true,
+"accessibility_check": true
+},
+// Publishing settings
+"publishing_settings": {
+"multi_platform": true,
+"social_media_integration": true,
+"newsletter_integration": true,
+"analytics_tracking": true
+},
+// Collaboration settings
+"collaboration_settings": {
+"version_control": true,
+"review_workflow": true,
+"comment_system": true,
+"approval_process": true
+}
+}
+}
+// ============================================================================
+// CONTENT CREATION SUITE CUSTOMIZATION NOTES
+// ============================================================================
+// This workflow provides a comprehensive content creation environment with:
+// 
+// 1. CONTENT QUALITY AUTOMATION:
+//    - Real-time grammar and style checking
+//    - Readability and accessibility analysis
+//    - SEO optimization suggestions
+//    - Brand voice consistency checking
+// 
+// 2. MULTI-PLATFORM PUBLISHING:
+//    - Automated publishing to blogs and websites
+//    - Social media content distribution
+//    - Newsletter and email marketing integration
+//    - Documentation platform synchronization
+// 
+// 3. CONTENT RESEARCH AND PLANNING:
+//    - Automated topic research and suggestions
+//    - Trend analysis and content gap identification
+//    - Content calendar integration
+//    - Competitor content analysis
+// 
+// 4. COLLABORATION AND WORKFLOW:
+//    - Multi-stage review and approval processes
+//    - Team collaboration tools integration
+//    - Version control and backup systems
+//    - Deadline tracking and notifications
+// 
+// 5. PERFORMANCE TRACKING:
+//    - Cross-platform analytics integration
+//    - Content performance dashboards
+//    - Engagement metrics and insights
+//    - ROI tracking and reporting
+// 
+// To customize this workflow for specific content types:
+// 
+// For Technical Writing:
+// - Add technical documentation contexts
+// - Enable API documentation generation
+// - Include code example validation
+// - Add technical review workflows
+// 
+// For Marketing Content:
+// - Add brand guidelines and voice contexts
+// - Enable conversion tracking hooks
+// - Include A/B testing automation
+// - Add lead generation workflows
+// 
+// For Educational Content:
+// - Add learning design contexts
+// - Enable accessibility compliance checking
+// - Include assessment and quiz generation
+// - Add student engagement tracking
+// 
+// For News and Journalism:
+// - Add fact-checking automation
+// - Enable source verification workflows
+// - Include breaking news distribution
+// - Add editorial calendar management
+// 
+// For E-commerce Content:
+// - Add product description templates
+// - Enable inventory integration
+// - Include conversion optimization
+// - Add customer review integration
+// ============================================================================
+}

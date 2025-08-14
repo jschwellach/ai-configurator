@@ -1,0 +1,193 @@
+{
+    // ============================================================================
+    // CONTENT CREATOR PROFILE
+    // ============================================================================
+    // This profile is designed for content creators, writers, bloggers, technical
+    // writers, and documentation specialists. It provides contexts and tools
+    // specifically tailored for content creation workflows.
+    // ============================================================================
+    // METADATA SECTION
+    "metadata": {
+        "name": "content-creator",
+        "description": "Profile optimized for content creators, writers, and documentation specialists",
+        "category": "basic",
+        "version": "1.0.0",
+        "author": "AI Configurator Team",
+        "created": "2024-01-01",
+        "tags": [
+            "content",
+            "writing",
+            "documentation",
+            "blogging",
+            "marketing"
+        ],
+        "complexity": "low",
+        "prerequisites": [],
+        "related_templates": [
+            "minimal",
+            "student",
+            "technical-writer"
+        ]
+    },
+    // CONTEXT PATHS SECTION
+    // ============================================================================
+    // Contexts specifically chosen for content creation workflows:
+    // - Writing guidelines and best practices
+    // - Content strategy frameworks
+    // - Documentation standards
+    // - Project-specific information
+    // ============================================================================
+    "paths": [
+        // Core content creation guidelines - comprehensive writing best practices
+        "examples/contexts/domains/content-creation-guidelines.md",
+        // Client communication guidelines - for working with stakeholders
+        "contexts/client-communication.md",
+        // Project delivery context - for managing content projects
+        "contexts/project-delivery.md",
+        // Project README - provides context about the current project
+        "README.md",
+        // Contributing guidelines - for collaborative writing projects
+        "?CONTRIBUTING.md",
+        // Any additional documentation in the docs folder
+        "?docs/**/*.md"
+    ],
+    // HOOKS SECTION
+    // ============================================================================
+    // Automation hooks useful for content creators:
+    // - Grammar and style checking
+    // - Automatic documentation generation
+    // - Content publishing workflows
+    // ============================================================================
+    "hooks": {
+        // Grammar and style checker - runs when markdown files are saved
+        "content-quality-check": {
+            "enabled": false, // Enable when you have the hook script available
+            "description": "Automatically check grammar and style in content files",
+            "trigger": "on_file_save",
+            "config": {
+                "file_patterns": [
+                    "*.md",
+                    "*.txt",
+                    "*.rst"
+                ],
+                "check_grammar": true,
+                "check_style": true,
+                "style_guide": "content-creation",
+                "exclude_patterns": [
+                    "node_modules/**",
+                    ".git/**"
+                ]
+            }
+        },
+        // Auto-documentation generator - creates documentation from code comments
+        "auto-documentation": {
+            "enabled": false, // Enable when you have the hook script available
+            "description": "Generate documentation from code comments and docstrings",
+            "trigger": "on_commit",
+            "config": {
+                "source_patterns": [
+                    "src/**/*.py",
+                    "src/**/*.js",
+                    "src/**/*.ts"
+                ],
+                "output_format": "markdown",
+                "output_directory": "docs/api/",
+                "include_private": false
+            }
+        },
+        // Content publishing workflow - helps with content distribution
+        "content-publisher": {
+            "enabled": false, // Enable when you have the hook script available
+            "description": "Automate content publishing to multiple platforms",
+            "trigger": "manual", // Triggered manually when content is ready
+            "config": {
+                "platforms": [
+                    "blog",
+                    "social_media",
+                    "newsletter"
+                ],
+                "content_directory": "content/",
+                "draft_directory": "drafts/",
+                "published_directory": "published/"
+            }
+        }
+    },
+    // SETTINGS SECTION
+    // ============================================================================
+    // Settings optimized for content creation workflows
+    // ============================================================================
+    "settings": {
+        // Auto-reload contexts when files change (useful during writing)
+        "auto_reload": true,
+        // Higher limit for contexts since content creators often reference many docs
+        "max_contexts": 75,
+        // Validate contexts to catch broken links and references
+        "validate_contexts": true,
+        // Info level logging for content creation feedback
+        "log_level": "info",
+        // Content-specific settings
+        "content_settings": {
+            // Preferred markup format for generated content
+            "markup_format": "markdown",
+            // Default content directory for new files
+            "content_directory": "content/",
+            // Template directory for content templates
+            "template_directory": "templates/content/",
+            // Whether to automatically create content metadata
+            "auto_metadata": true,
+            // Default content license
+            "default_license": "CC BY 4.0"
+        }
+    }
+    // ============================================================================
+    // CONTENT CREATOR CUSTOMIZATION NOTES
+    // ============================================================================
+    // To customize this profile for your specific content creation needs:
+    // 
+    // 1. WRITING FOCUS:
+    //    - For technical writing: Add "contexts/technical-writing-standards.md"
+    //    - For marketing content: Add marketing-specific contexts
+    //    - For academic writing: Add research and citation contexts
+    // 
+    // 2. PLATFORM-SPECIFIC:
+    //    - For blog writing: Enable content-publisher hook
+    //    - For documentation: Enable auto-documentation hook
+    //    - For social media: Add social media strategy contexts
+    // 
+    // 3. COLLABORATION:
+    //    - Add team style guides to paths
+    //    - Enable hooks for team workflows
+    //    - Include project-specific writing guidelines
+    // 
+    // 4. QUALITY ASSURANCE:
+    //    - Enable content-quality-check hook for automated proofreading
+    //    - Add peer review workflows
+    //    - Include accessibility guidelines
+    // 
+    // Example customizations:
+    // 
+    // For Technical Writers:
+    // "paths": [
+    //   "examples/contexts/domains/content-creation-guidelines.md",
+    //   "contexts/technical-writing-standards.md",
+    //   "contexts/api-documentation-guide.md",
+    //   "README.md"
+    // ]
+    // 
+    // For Marketing Content:
+    // "paths": [
+    //   "examples/contexts/domains/content-creation-guidelines.md",
+    //   "contexts/brand-guidelines.md",
+    //   "contexts/marketing-strategy.md",
+    //   "contexts/seo-best-practices.md"
+    // ]
+    // 
+    // For Academic Writing:
+    // "paths": [
+    //   "examples/contexts/domains/content-creation-guidelines.md",
+    //   "contexts/research-methods.md",
+    //   "contexts/citation-styles.md",
+    //   "contexts/academic-writing-standards.md"
+    // ]
+    // ============================================================================
+}

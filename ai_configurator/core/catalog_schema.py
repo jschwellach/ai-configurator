@@ -3,7 +3,7 @@ Simplified catalog schema for AI Configurator library.
 """
 
 from datetime import datetime
-from typing import List
+from typing import List, Dict, Any, Optional
 from pydantic import BaseModel, Field
 
 
@@ -24,6 +24,28 @@ class GlobalContext(BaseModel):
     version: str
     file_path: str
     priority: int = Field(default=0, description="Priority for context loading (higher = loaded first)")
+
+
+class AgentConfig(BaseModel):
+    """Q CLI Agent configuration format."""
+    schema_url: str = Field(
+        default="https://raw.githubusercontent.com/aws/amazon-q-developer-cli/refs/heads/main/schemas/agent-v1.json",
+        alias="$schema"
+    )
+    name: str
+    description: str
+    prompt: Optional[str] = None
+    mcpServers: Dict[str, Any] = Field(default_factory=dict)
+    tools: List[str] = Field(default_factory=lambda: ["*"])
+    toolAliases: Dict[str, str] = Field(default_factory=dict)
+    allowedTools: List[str] = Field(default_factory=list)
+    resources: List[str] = Field(default_factory=list)
+    hooks: Dict[str, Any] = Field(default_factory=dict)
+    toolsSettings: Dict[str, Any] = Field(default_factory=dict)
+    useLegacyMcpJson: bool = True
+
+    class Config:
+        populate_by_name = True
 
 
 class LibraryCatalog(BaseModel):
