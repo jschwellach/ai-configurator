@@ -1,0 +1,18 @@
+contexts:
+  default:
+    - "contexts/aws-best-practices.md"
+  development:
+    - "contexts/development-guidelines.md"
+    - "contexts/aws-best-practices.md"
+  solutions-architect:
+    - "contexts/aws-best-practices.md"
+    - "contexts/architecture-patterns.md"
+  engagement-manager:
+    - "contexts/engagement-management.md"
+    - "contexts/client-communication.md"
+    - "contexts/project-delivery.md"
+    - "contexts/aws-best-practices.md"
+
+# Dynamic context hooks
+dynamic_hooks:
+  engagement-manager: "engagement_manager_context.py"

@@ -1,0 +1,15 @@
+{
+  "paths": [
+    ".amazonq/rules/**/*.md",
+    "README.md",
+    "contexts/engagement-management.md",
+    "contexts/client-communication.md",
+    "contexts/project-delivery.md",
+    "contexts/aws-best-practices.md"
+  ],
+  "hooks": {
+    "conversation_start": [
+      "python3 ~/.aws/amazonq/hooks/engagement_manager_context.py"
+    ]
+  }
+}

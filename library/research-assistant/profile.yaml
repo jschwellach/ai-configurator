@@ -1,0 +1,8 @@
+name: "Research Assistant Profile"
+description: "AI research assistant that gathers, categorizes, and cites information from multiple sources for comprehensive analysis"
+version: "1.0.0"
+contexts:
+  - "research-methodology.md"
+  - "information-gathering.md"
+  - "citation-standards.md"
+hooks: []

@@ -1,0 +1,28 @@
+{
+  "mcpServers": {
+    "aidlc": {
+      "command": "aidlc-mcp-sdk",
+      "args": ["--debug"],
+      "env": {},
+      "disabled": false,
+      "autoApprove": []
+    },
+    "amazon-internal-mcp-server": {
+      "command": "amzn-mcp",
+      "args": [],
+      "env": {},
+      "disabled": false,
+      "autoApprove": []
+    },
+    "aws-cloudhsm-migration-tool": {
+      "command": "python",
+      "args": ["/path/to/cloudhsm_migration_mcp_server.py"],
+      "env": {
+        "FASTMCP_LOG_LEVEL": "INFO",
+        "CLOUDHSM_MIGRATION_TOOL_HOME": "/path/to/tool"
+      },
+      "disabled": true,
+      "autoApprove": []
+    }
+  }
+}

@@ -1,0 +1,74 @@
+name: "auto-documentation"
+description: "Automatically generate and update project documentation"
+version: "1.0"
+type: "automation"
+trigger: "on_file_save"
+timeout: 60
+enabled: true
+
+# Configuration for documentation generation
+config:
+  # File patterns that trigger documentation updates
+  watch_patterns:
+    - "**/*.py"
+    - "**/*.js"
+    - "**/*.ts"
+    - "**/*.md"
+    - "**/README*"
+    - "**/CHANGELOG*"
+
+  # Documentation formats to generate
+  output_formats:
+    - "markdown"
+    - "html"
+    - "json"
+
+  # Output directory for generated documentation
+  output_dir: "docs/generated"
+
+  # Documentation sections to include
+  sections:
+    - "api_reference"
+    - "code_structure"
+    - "changelog"
+    - "dependencies"
+
+  # Language-specific configuration
+  languages:
+    python:
+      docstring_style: "google"
+      include_private: false
+      include_tests: true
+    javascript:
+      jsdoc_style: "standard"
+      include_types: true
+    typescript:
+      include_interfaces: true
+      include_types: true
+
+# Execution script
+script: "auto_documentation.py"
+
+# Conditions for when this hook should run
+conditions:
+  - file_extension: [".py", ".js", ".ts", ".md"]
+    project_type: ["library", "application", "documentation"]
+
+# Context sources for documentation guidelines
+context:
+  sources:
+    - "contexts/domains/technical-writing-standards.md"
+  tags: ["documentation", "automation", "code-analysis"]
+  priority: 3
+
+# Metadata
+metadata:
+  author: "AI Configurator Team"
+  category: "automation"
+  complexity: "medium"
+  prerequisites:
+    - "Python 3.8+"
+    - "Project with source code"
+  related_hooks:
+    - "code-quality-check"
+    - "environment-setup"

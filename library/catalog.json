@@ -59,6 +59,13 @@
             "description": "Complete profile for system administrators",
             "version": "1.0.0",
             "file_path": "system-administrator/profile.yaml"
+        },
+        {
+            "id": "research-assistant-v1",
+            "name": "Research Assistant Profile",
+            "description": "AI research assistant that gathers, categorizes, and cites information from multiple sources for comprehensive analysis",
+            "version": "1.0.0",
+            "file_path": "research-assistant/profile.yaml"
         }
     ]
 }

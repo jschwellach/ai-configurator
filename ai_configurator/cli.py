@@ -104,12 +104,12 @@ def install_profile(profile_id: str) -> None:
             return
         
         # Install the profile
-        console.print(f"Installing profile: [cyan]{config.name}[/cyan]")
+        console.print(f"Installing agent: [cyan]{config.name}[/cyan]")
         
         if installer.install_profile(profile_id):
-            console.print(f"[green]✅ Successfully installed profile: {config.name}[/green]")
+            console.print(f"[green]✅ Successfully installed agent: {config.name}[/green]")
         else:
-            console.print(f"[red]❌ Failed to install profile: {config.name}[/red]")
+            console.print(f"[red]❌ Failed to install agent: {config.name}[/red]")
     
     finally:
         library_manager.shutdown()
@@ -135,12 +135,12 @@ def remove_profile(profile_id: str) -> None:
             return
         
         # Remove the profile
-        console.print(f"Removing profile: [cyan]{config.name}[/cyan]")
+        console.print(f"Removing agent: [cyan]{config.name}[/cyan]")
         
         if installer.remove_profile(profile_id):
-            console.print(f"[green]✅ Successfully removed profile: {config.name}[/green]")
+            console.print(f"[green]✅ Successfully removed agent: {config.name}[/green]")
         else:
-            console.print(f"[red]❌ Failed to remove profile: {config.name}[/red]")
+            console.print(f"[red]❌ Failed to remove agent: {config.name}[/red]")
     
     finally:
         library_manager.shutdown()
@@ -176,7 +176,7 @@ def show_info(profile_id: str, format: str) -> None:
             # Show installation status
             status = "[green]✅ Installed[/green]" if is_installed else "[red]❌ Not Installed[/red]"
             
-            console.print(Panel(f"[bold cyan]{config.name}[/bold cyan] - {status}", title="Profile", border_style="cyan"))
+            console.print(Panel(f"[bold cyan]{config.name}[/bold cyan] - {status}", title="Agent", border_style="cyan"))
             console.print(f"[bold]ID:[/bold] {config.id}")
             console.print(f"[bold]Version:[/bold] {config.version}")
             console.print(Panel(config.description, title="Description", border_style="green"))
@@ -234,7 +234,7 @@ def list_global_contexts(format: str) -> None:
             
             console.print(table)
             console.print(f"\nFound {len(contexts)} global contexts")
-            console.print("[dim]Global contexts are automatically included when installing any profile.[/dim]")
+            console.print("[dim]Global contexts are automatically included when installing any agent.[/dim]")
     
     finally:
         library_manager.shutdown()
@@ -270,7 +270,7 @@ def show_global_context_info(context_id: str, format: str) -> None:
             console.print(f"[bold]Version:[/bold] {context.version}")
             console.print(f"[bold]File Path:[/bold] {context.file_path}")
             console.print(Panel(context.description, title="Description", border_style="green"))
-            console.print("\n[dim]This context is automatically applied to all profiles when installed.[/dim]")
+            console.print("\n[dim]This context is automatically applied to all agents when installed.[/dim]")
     
     finally:
         library_manager.shutdown()
@@ -288,7 +288,7 @@ def install_global_contexts() -> None:
     
     if success:
         console.print("[green]✓[/green] Global contexts installed successfully")
-        console.print("[dim]Global contexts are now available for all Amazon Q profiles[/dim]")
+        console.print("[dim]Global contexts are now available for all Amazon Q agents[/dim]")
     else:
         console.print("[red]✗[/red] Failed to install global contexts")
 
@@ -306,7 +306,7 @@ def remove_global_contexts() -> None:
     
     if success:
         console.print("[green]✓[/green] Global contexts removed successfully")
-        console.print("[dim]Global contexts are no longer available for Amazon Q profiles[/dim]")
+        console.print("[dim]Global contexts are no longer available for Amazon Q agents[/dim]")
     else:
         console.print("[red]✗[/red] Failed to remove global contexts")
 

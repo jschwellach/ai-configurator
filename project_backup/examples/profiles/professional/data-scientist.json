@@ -1,0 +1,295 @@
+{
+    // ============================================================================
+    // DATA SCIENTIST PROFILE
+    // ============================================================================
+    // This profile is designed for data scientists, ML engineers, data analysts,
+    // and researchers working with machine learning and analytics workflows.
+    // It provides contexts and automation tools specifically tailored for
+    // data science best practices and ML development lifecycle.
+    // ============================================================================
+    // METADATA SECTION
+    "metadata": {
+        "name": "data-scientist",
+        "description": "Profile optimized for data scientists, ML engineers, and analytics professionals",
+        "category": "professional",
+        "version": "1.0.0",
+        "author": "AI Configurator Team",
+        "created": "2024-01-01",
+        "tags": [
+            "data-science",
+            "machine-learning",
+            "analytics",
+            "python",
+            "jupyter",
+            "research",
+            "modeling"
+        ],
+        "complexity": "medium",
+        "prerequisites": [
+            "Python environment",
+            "Jupyter notebooks",
+            "Git version control"
+        ],
+        "related_templates": [
+            "devops-engineer",
+            "security-specialist",
+            "technical-writer"
+        ]
+    },
+    // CONTEXT PATHS SECTION
+    // ============================================================================
+    // Contexts specifically chosen for data science workflows:
+    // - Data science best practices and methodologies
+    // - ML model development and validation guidelines
+    // - Data ethics and privacy considerations
+    // - Research and experimentation frameworks
+    // - Code quality and reproducibility standards
+    // ============================================================================
+    "paths": [
+        // Core data science best practices - comprehensive ML and analytics guidelines
+        "examples/contexts/domains/data-science-best-practices.md",
+        // Development guidelines - coding standards for data science projects
+        "contexts/development-guidelines.md",
+        // AWS best practices - for cloud-based ML workflows
+        "contexts/aws-best-practices.md",
+        // Project delivery context - for managing data science projects
+        "contexts/project-delivery.md",
+        // Project README - provides context about the current project
+        "README.md",
+        // Contributing guidelines - for collaborative data science projects
+        "?CONTRIBUTING.md",
+        // Documentation in docs folder - project-specific documentation
+        "?docs/**/*.md",
+        // Jupyter notebooks - for context about existing analyses
+        "?notebooks/**/*.ipynb",
+        // Data documentation - schemas, data dictionaries, etc.
+        "?data/**/*.md",
+        // Model documentation - model cards, evaluation reports
+        "?models/**/*.md"
+    ],
+    // HOOKS SECTION
+    // ============================================================================
+    // Automation hooks useful for data scientists:
+    // - Data quality validation
+    // - Model performance monitoring
+    // - Experiment tracking
+    // - Code quality checks for data science code
+    // - Automated documentation generation
+    // ============================================================================
+    "hooks": {
+        // Data quality validator - runs when data files are updated
+        "data-quality-check": {
+            "enabled": false, // Enable when you have the hook script available
+            "description": "Automatically validate data quality and schema compliance",
+            "trigger": "on_file_save",
+            "config": {
+                "file_patterns": [
+                    "data/**/*.csv",
+                    "data/**/*.parquet",
+                    "data/**/*.json",
+                    "data/**/*.xlsx"
+                ],
+                "checks": [
+                    "schema_validation",
+                    "missing_values",
+                    "data_drift",
+                    "outlier_detection"
+                ],
+                "schema_path": "data/schemas/",
+                "report_output": "reports/data_quality/",
+                "fail_on_errors": false
+            }
+        },
+        // Model validation - runs when model files are updated
+        "model-validation": {
+            "enabled": false, // Enable when you have the hook script available
+            "description": "Validate model performance and generate evaluation reports",
+            "trigger": "on_file_save",
+            "config": {
+                "file_patterns": [
+                    "models/**/*.pkl",
+                    "models/**/*.joblib",
+                    "models/**/*.h5",
+                    "models/**/*.onnx"
+                ],
+                "validation_tests": [
+                    "performance_metrics",
+                    "bias_detection",
+                    "feature_importance",
+                    "model_explainability"
+                ],
+                "test_data_path": "data/test/",
+                "report_output": "reports/model_validation/",
+                "metrics_tracking": true
+            }
+        },
+        // Experiment tracker - logs experiments and results
+        "experiment-tracker": {
+            "enabled": false, // Enable when you have the hook script available
+            "description": "Track experiments, parameters, and results automatically",
+            "trigger": "on_notebook_run",
+            "config": {
+                "notebook_patterns": [
+                    "notebooks/**/*.ipynb",
+                    "experiments/**/*.ipynb"
+                ],
+                "tracking_backend": "mlflow", // or "wandb", "tensorboard"
+                "experiment_name": "default",
+                "auto_log_params": true,
+                "auto_log_metrics": true,
+                "auto_log_artifacts": true,
+                "artifact_patterns": [
+                    "models/**/*",
+                    "plots/**/*",
+                    "reports/**/*"
+                ]
+            }
+        },
+        // Code quality checker for data science code
+        "ds-code-quality": {
+            "enabled": false, // Enable when you have the hook script available
+            "description": "Check code quality with data science specific linting rules",
+            "trigger": "on_file_save",
+            "config": {
+                "file_patterns": [
+                    "src/**/*.py",
+                    "notebooks/**/*.ipynb",
+                    "scripts/**/*.py"
+                ],
+                "linters": [
+                    "flake8",
+                    "black",
+                    "isort",
+                    "mypy"
+                ],
+                "ds_specific_checks": [
+                    "pandas_best_practices",
+                    "numpy_usage",
+                    "sklearn_patterns",
+                    "notebook_quality"
+                ],
+                "exclude_patterns": [
+                    "venv/**",
+                    ".git/**",
+                    "__pycache__/**"
+                ]
+            }
+        },
+        // Auto-documentation for data science projects
+        "ds-documentation": {
+            "enabled": false, // Enable when you have the hook script available
+            "description": "Generate documentation for data science projects",
+            "trigger": "on_commit",
+            "config": {
+                "source_patterns": [
+                    "src/**/*.py",
+                    "notebooks/**/*.ipynb",
+                    "data/**/*.md"
+                ],
+                "output_format": "markdown",
+                "output_directory": "docs/",
+                "include_sections": [
+                    "data_overview",
+                    "model_documentation",
+                    "api_reference",
+                    "experiment_results"
+                ],
+                "auto_generate": [
+                    "model_cards",
+                    "data_profiles",
+                    "experiment_summaries"
+                ]
+            }
+        }
+    },
+    // SETTINGS SECTION
+    // ============================================================================
+    // Settings optimized for data science workflows
+    // ============================================================================
+    "settings": {
+        // Auto-reload contexts when files change (useful during experimentation)
+        "auto_reload": true,
+        // Higher limit for contexts since data scientists reference many resources
+        "max_contexts": 100,
+        // Validate contexts to catch broken references
+        "validate_contexts": true,
+        // Info level logging for experiment feedback
+        "log_level": "info",
+        // Data science specific settings
+        "data_science_settings": {
+            // Default Python environment for data science work
+            "python_env": "data-science",
+            // Jupyter kernel to use for notebooks
+            "jupyter_kernel": "python3",
+            // Default data directory for datasets
+            "data_directory": "data/",
+            // Default models directory for saved models
+            "models_directory": "models/",
+            // Default notebooks directory for analysis
+            "notebooks_directory": "notebooks/",
+            // Default reports directory for outputs
+            "reports_directory": "reports/",
+            // Whether to automatically track experiments
+            "auto_experiment_tracking": true,
+            // Default random seed for reproducibility
+            "random_seed": 42,
+            // Memory limit for large datasets (in GB)
+            "memory_limit": 8
+        }
+    }
+    // ============================================================================
+    // DATA SCIENTIST CUSTOMIZATION NOTES
+    // ============================================================================
+    // To customize this profile for your specific data science needs:
+    // 
+    // 1. SPECIALIZATION FOCUS:
+    //    - For NLP: Add "contexts/nlp-best-practices.md"
+    //    - For Computer Vision: Add "contexts/cv-methodologies.md"
+    //    - For Time Series: Add "contexts/time-series-analysis.md"
+    //    - For Deep Learning: Add "contexts/deep-learning-practices.md"
+    // 
+    // 2. PLATFORM-SPECIFIC:
+    //    - For AWS: Enable AWS-specific contexts and hooks
+    //    - For Google Cloud: Add GCP ML contexts
+    //    - For Azure: Add Azure ML contexts
+    //    - For On-premise: Focus on local deployment contexts
+    // 
+    // 3. TEAM COLLABORATION:
+    //    - Add team coding standards to paths
+    //    - Enable experiment tracking hooks
+    //    - Include peer review workflows for models
+    //    - Add data governance contexts
+    // 
+    // 4. COMPLIANCE & ETHICS:
+    //    - Enable bias detection in model validation
+    //    - Add data privacy and ethics contexts
+    //    - Include regulatory compliance guidelines
+    //    - Add model interpretability requirements
+    // 
+    // Example customizations:
+    // 
+    // For NLP Specialists:
+    // "paths": [
+    //   "examples/contexts/domains/data-science-best-practices.md",
+    //   "contexts/nlp-methodologies.md",
+    //   "contexts/text-preprocessing-standards.md",
+    //   "contexts/language-model-ethics.md"
+    // ]
+    // 
+    // For Computer Vision:
+    // "paths": [
+    //   "examples/contexts/domains/data-science-best-practices.md",
+    //   "contexts/computer-vision-practices.md",
+    //   "contexts/image-processing-standards.md",
+    //   "contexts/model-deployment-cv.md"
+    // ]
+    // 
+    // For MLOps Focus:
+    // "hooks": {
+    //   "model-validation": { "enabled": true },
+    //   "experiment-tracker": { "enabled": true },
+    //   "ds-code-quality": { "enabled": true },
+    //   "ci-cd-ml": { "enabled": true }
+    // }
+    // ============================================================================
+}
