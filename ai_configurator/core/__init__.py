@@ -1,16 +1,18 @@
 """
-Simplified AI Configurator core module.
+AI Configurator core module - Agent-based architecture.
 """
 
-from .library_manager import LibraryManager
-from .profile_installer import ProfileInstaller
-from .catalog_schema import LibraryCatalog, ConfigItem
+from .config_library_manager import ConfigLibraryManager
+from .agent_installer import AgentInstaller
+from .catalog_schema import LibraryCatalog, ConfigItem, BaseContext, AgentConfig
 from . import file_utils
 
 __all__ = [
-    'LibraryManager',
-    'ProfileInstaller', 
+    'ConfigLibraryManager',
+    'AgentInstaller', 
     'LibraryCatalog',
     'ConfigItem',
+    'BaseContext',
+    'AgentConfig',
     'file_utils'
 ]
