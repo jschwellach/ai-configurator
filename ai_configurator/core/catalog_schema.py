@@ -26,23 +26,37 @@ class GlobalContext(BaseModel):
     priority: int = Field(default=0, description="Priority for context loading (higher = loaded first)")
 
 
+class HookCommand(BaseModel):
+    """Hook command configuration."""
+    command: str
+
+
+class McpServerConfig(BaseModel):
+    """MCP Server configuration."""
+    command: str
+    args: List[str] = Field(default_factory=list)
+    env: Optional[Dict[str, str]] = None
+    timeout: int = Field(default=120000)
+    disabled: bool = Field(default=False)
+
+
 class AgentConfig(BaseModel):
-    """Q CLI Agent configuration format."""
+    """Q CLI Agent configuration format matching official schema."""
     schema_url: str = Field(
         default="https://raw.githubusercontent.com/aws/amazon-q-developer-cli/refs/heads/main/schemas/agent-v1.json",
         alias="$schema"
     )
     name: str
-    description: str
+    description: Optional[str] = None
     prompt: Optional[str] = None
-    mcpServers: Dict[str, Any] = Field(default_factory=dict)
+    mcpServers: Dict[str, McpServerConfig] = Field(default_factory=dict)
     tools: List[str] = Field(default_factory=lambda: ["*"])
     toolAliases: Dict[str, str] = Field(default_factory=dict)
     allowedTools: List[str] = Field(default_factory=list)
     resources: List[str] = Field(default_factory=list)
-    hooks: Dict[str, Any] = Field(default_factory=dict)
-    toolsSettings: Dict[str, Any] = Field(default_factory=dict)
-    useLegacyMcpJson: bool = True
+    hooks: Dict[str, List[HookCommand]] = Field(default_factory=dict)
+    toolsSettings: Dict[str, Dict[str, Any]] = Field(default_factory=dict)
+    useLegacyMcpJson: bool = Field(default=False)
 
     class Config:
         populate_by_name = True
