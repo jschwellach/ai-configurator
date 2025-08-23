@@ -1,4 +1,4 @@
-"""Final simplified CLI interface for AI Configurator."""
+"""Final simplified CLI interface for AI Configurator - Agent-based version."""
 
 import json
 import click
@@ -7,8 +7,8 @@ from rich.table import Table
 from rich.panel import Panel
 
 from ai_configurator import __version__
-from ai_configurator.core.library_manager import LibraryManager
-from ai_configurator.core.profile_installer import ProfileInstaller
+from ai_configurator.core.config_library_manager import ConfigLibraryManager
+from ai_configurator.core.agent_installer import AgentInstaller
 
 console = Console()
 
@@ -26,7 +26,7 @@ console = Console()
     help="Suppress non-error output"
 )
 def cli(verbose: bool, quiet: bool) -> None:
-    """AI Configurator - Simple tool to install profiles and configurations."""
+    """AI Configurator - Install profiles as Amazon Q CLI agents."""
     # Set up logging based on verbosity
     if verbose:
         import logging
@@ -41,109 +41,125 @@ def cli(verbose: bool, quiet: bool) -> None:
 @click.option("--format", "-f", type=click.Choice(["table", "json"]), default="table", help="Output format")
 def list_profiles(query: str, format: str) -> None:
     """List available profiles."""
-    library_manager = LibraryManager()
+    library_manager = ConfigLibraryManager()
+    installer = AgentInstaller(library_manager)
     
     try:
-        configs = library_manager.search_configurations(query=query)
+        profiles = library_manager.get_profiles()
         
-        if not configs:
+        # Apply search filter if provided
+        if query:
+            query_lower = query.lower()
+            profiles = [
+                p for p in profiles 
+                if query_lower in p.name.lower() or query_lower in p.description.lower() or query_lower in p.id.lower()
+            ]
+        
+        if not profiles:
             console.print("No profiles found matching the criteria.")
             return
         
         if format == "json":
-            configs_data = [
+            profiles_data = [
                 {
-                    "id": config.id,
-                    "name": config.name,
-                    "description": config.description,
-                    "version": config.version
+                    "id": profile.id,
+                    "name": profile.name,
+                    "description": profile.description,
+                    "version": profile.version,
+                    "installed": installer.is_profile_installed(profile.id)
                 }
-                for config in configs
+                for profile in profiles
             ]
-            console.print(json.dumps(configs_data, indent=2))
+            console.print(json.dumps(profiles_data, indent=2))
         else:
             table = Table(title="Available Profiles")
             table.add_column("Name", style="cyan", width=25)
             table.add_column("ID", style="blue", width=30)
             table.add_column("Version", style="green", width=10)
-            table.add_column("Description", style="white", width=50)
+            table.add_column("Status", style="yellow", width=12)
+            table.add_column("Description", style="white", width=40)
             
-            for config in configs:
+            for profile in profiles:
+                status = "✅ Installed" if installer.is_profile_installed(profile.id) else "❌ Not Installed"
                 table.add_row(
-                    config.name,
-                    config.id,
-                    config.version,
-                    config.description[:47] + "..." if len(config.description) > 50 else config.description
+                    profile.name,
+                    profile.id,
+                    profile.version,
+                    status,
+                    profile.description[:37] + "..." if len(profile.description) > 40 else profile.description
                 )
             
             console.print(table)
-            console.print(f"\nFound {len(configs)} profiles")
+            console.print(f"\nFound {len(profiles)} profiles")
+            console.print("[dim]Use 'q chat --agent <ID>' to use an installed agent[/dim]")
     
-    finally:
-        library_manager.shutdown()
+    except Exception as e:
+        console.print(f"[red]Error: {e}[/red]")
 
 
 @cli.command("install")
 @click.argument("profile_id")
 def install_profile(profile_id: str) -> None:
-    """Install a profile."""
-    library_manager = LibraryManager()
-    installer = ProfileInstaller(library_manager)
+    """Install a profile as an Amazon Q CLI agent."""
+    library_manager = ConfigLibraryManager()
+    installer = AgentInstaller(library_manager)
     
     try:
         # Check if profile exists
-        config = library_manager.get_configuration_by_id(profile_id)
-        if not config:
+        profile = library_manager.get_profile_by_id(profile_id)
+        if not profile:
             console.print(f"[red]Profile '{profile_id}' not found.[/red]")
             console.print("\nUse 'ai-config list' to see available profiles.")
             return
         
         # Check if already installed
         if installer.is_profile_installed(profile_id):
-            console.print(f"[yellow]Profile '{config.name}' is already installed.[/yellow]")
+            console.print(f"[yellow]Agent '{profile.name}' is already installed.[/yellow]")
+            console.print(f"[dim]Use: q chat --agent {profile_id}[/dim]")
             return
         
         # Install the profile
-        console.print(f"Installing agent: [cyan]{config.name}[/cyan]")
+        console.print(f"Installing agent: [cyan]{profile.name}[/cyan]")
         
         if installer.install_profile(profile_id):
-            console.print(f"[green]✅ Successfully installed agent: {config.name}[/green]")
+            console.print(f"[green]✅ Successfully installed agent: {profile.name}[/green]")
+            console.print(f"[dim]Use: q chat --agent {profile_id}[/dim]")
         else:
-            console.print(f"[red]❌ Failed to install agent: {config.name}[/red]")
+            console.print(f"[red]❌ Failed to install agent: {profile.name}[/red]")
     
-    finally:
-        library_manager.shutdown()
+    except Exception as e:
+        console.print(f"[red]Error: {e}[/red]")
 
 
 @cli.command("remove")
 @click.argument("profile_id")
 def remove_profile(profile_id: str) -> None:
-    """Remove an installed profile."""
-    library_manager = LibraryManager()
-    installer = ProfileInstaller(library_manager)
+    """Remove an installed agent."""
+    library_manager = ConfigLibraryManager()
+    installer = AgentInstaller(library_manager)
     
     try:
         # Check if profile exists
-        config = library_manager.get_configuration_by_id(profile_id)
-        if not config:
+        profile = library_manager.get_profile_by_id(profile_id)
+        if not profile:
             console.print(f"[red]Profile '{profile_id}' not found.[/red]")
             return
         
         # Check if installed
         if not installer.is_profile_installed(profile_id):
-            console.print(f"[yellow]Profile '{config.name}' is not installed.[/yellow]")
+            console.print(f"[yellow]Agent '{profile.name}' is not installed.[/yellow]")
             return
         
         # Remove the profile
-        console.print(f"Removing agent: [cyan]{config.name}[/cyan]")
+        console.print(f"Removing agent: [cyan]{profile.name}[/cyan]")
         
         if installer.remove_profile(profile_id):
-            console.print(f"[green]✅ Successfully removed agent: {config.name}[/green]")
+            console.print(f"[green]✅ Successfully removed agent: {profile.name}[/green]")
         else:
-            console.print(f"[red]❌ Failed to remove agent: {config.name}[/red]")
+            console.print(f"[red]❌ Failed to remove agent: {profile.name}[/red]")
     
-    finally:
-        library_manager.shutdown()
+    except Exception as e:
+        console.print(f"[red]Error: {e}[/red]")
 
 
 @cli.command("info")
@@ -151,164 +167,93 @@ def remove_profile(profile_id: str) -> None:
 @click.option("--format", "-f", type=click.Choice(["panel", "json"]), default="panel", help="Output format")
 def show_info(profile_id: str, format: str) -> None:
     """Show detailed information about a profile."""
-    library_manager = LibraryManager()
-    installer = ProfileInstaller(library_manager)
+    library_manager = ConfigLibraryManager()
+    installer = AgentInstaller(library_manager)
     
     try:
-        config = library_manager.get_configuration_by_id(profile_id)
+        profile = library_manager.get_profile_by_id(profile_id)
         
-        if not config:
+        if not profile:
             console.print(f"[red]Profile '{profile_id}' not found.[/red]")
             return
         
         is_installed = installer.is_profile_installed(profile_id)
         
         if format == "json":
-            config_data = {
-                "id": config.id,
-                "name": config.name,
-                "description": config.description,
-                "version": config.version,
+            profile_data = {
+                "id": profile.id,
+                "name": profile.name,
+                "description": profile.description,
+                "version": profile.version,
                 "installed": is_installed
             }
-            console.print(json.dumps(config_data, indent=2))
+            console.print(json.dumps(profile_data, indent=2))
         else:
             # Show installation status
             status = "[green]✅ Installed[/green]" if is_installed else "[red]❌ Not Installed[/red]"
             
-            console.print(Panel(f"[bold cyan]{config.name}[/bold cyan] - {status}", title="Agent", border_style="cyan"))
-            console.print(f"[bold]ID:[/bold] {config.id}")
-            console.print(f"[bold]Version:[/bold] {config.version}")
-            console.print(Panel(config.description, title="Description", border_style="green"))
+            console.print(Panel(f"[bold cyan]{profile.name}[/bold cyan] - {status}", title="Agent", border_style="cyan"))
+            console.print(f"[bold]ID:[/bold] {profile.id}")
+            console.print(f"[bold]Version:[/bold] {profile.version}")
+            console.print(Panel(profile.description, title="Description", border_style="green"))
             
             if not is_installed:
-                console.print(f"\n[dim]To install: ai-config install {config.id}[/dim]")
+                console.print(f"\n[dim]To install: ai-config install {profile.id}[/dim]")
+                console.print(f"[dim]Then use: q chat --agent {profile.id}[/dim]")
             else:
-                console.print(f"\n[dim]To remove: ai-config remove {config.id}[/dim]")
+                console.print(f"\n[dim]To use: q chat --agent {profile.id}[/dim]")
+                console.print(f"[dim]To remove: ai-config remove {profile.id}[/dim]")
     
-    finally:
-        library_manager.shutdown()
+    except Exception as e:
+        console.print(f"[red]Error: {e}[/red]")
 
 
-@cli.command("list-global")
+@cli.command("agents")
 @click.option("--format", "-f", type=click.Choice(["table", "json"]), default="table", help="Output format")
-def list_global_contexts(format: str) -> None:
-    """List available global contexts."""
-    library_manager = LibraryManager()
+def list_installed_agents(format: str) -> None:
+    """List installed Amazon Q CLI agents."""
+    library_manager = ConfigLibraryManager()
+    installer = AgentInstaller(library_manager)
     
     try:
-        contexts = library_manager.get_global_contexts()
+        installed_agents = installer.list_installed_agents()
         
-        if not contexts:
-            console.print("No global contexts found.")
+        if not installed_agents:
+            console.print("No agents are currently installed.")
+            console.print("[dim]Use 'ai-config install <profile-id>' to install an agent[/dim]")
             return
         
         if format == "json":
-            contexts_data = [
-                {
-                    "id": context.id,
-                    "name": context.name,
-                    "description": context.description,
-                    "version": context.version,
-                    "priority": context.priority
-                }
-                for context in contexts
-            ]
-            console.print(json.dumps(contexts_data, indent=2))
+            console.print(json.dumps(installed_agents, indent=2))
         else:
-            table = Table(title="Global Contexts (Applied to All Profiles)")
-            table.add_column("Name", style="cyan", width=30)
-            table.add_column("ID", style="blue", width=25)
-            table.add_column("Priority", style="green", width=8)
-            table.add_column("Version", style="green", width=8)
-            table.add_column("Description", style="white", width=40)
+            table = Table(title="Installed Amazon Q CLI Agents")
+            table.add_column("Agent ID", style="cyan", width=30)
+            table.add_column("Usage", style="green", width=50)
             
-            for context in contexts:
-                table.add_row(
-                    context.name,
-                    context.id,
-                    str(context.priority),
-                    context.version,
-                    context.description[:37] + "..." if len(context.description) > 40 else context.description
-                )
+            for agent_id in installed_agents:
+                table.add_row(agent_id, f"q chat --agent {agent_id}")
             
             console.print(table)
-            console.print(f"\nFound {len(contexts)} global contexts")
-            console.print("[dim]Global contexts are automatically included when installing any agent.[/dim]")
+            console.print(f"\nFound {len(installed_agents)} installed agents")
     
-    finally:
-        library_manager.shutdown()
+    except Exception as e:
+        console.print(f"[red]Error: {e}[/red]")
 
 
-@cli.command("info-global")
-@click.argument("context_id")
-@click.option("--format", "-f", type=click.Choice(["panel", "json"]), default="panel", help="Output format")
-def show_global_context_info(context_id: str, format: str) -> None:
-    """Show detailed information about a global context."""
-    library_manager = LibraryManager()
+@cli.command("refresh")
+def refresh_library() -> None:
+    """Refresh the library from source."""
+    library_manager = ConfigLibraryManager()
     
     try:
-        context = library_manager.get_global_context_by_id(context_id)
-        
-        if not context:
-            console.print(f"[red]Global context '{context_id}' not found.[/red]")
-            return
-        
-        if format == "json":
-            context_data = {
-                "id": context.id,
-                "name": context.name,
-                "description": context.description,
-                "version": context.version,
-                "priority": context.priority,
-                "file_path": context.file_path
-            }
-            console.print(json.dumps(context_data, indent=2))
+        console.print("Refreshing library from source...")
+        if library_manager.refresh_library():
+            console.print("[green]✅ Library refreshed successfully[/green]")
         else:
-            console.print(Panel(f"[bold cyan]{context.name}[/bold cyan] - Priority: {context.priority}", title="Global Context", border_style="cyan"))
-            console.print(f"[bold]ID:[/bold] {context.id}")
-            console.print(f"[bold]Version:[/bold] {context.version}")
-            console.print(f"[bold]File Path:[/bold] {context.file_path}")
-            console.print(Panel(context.description, title="Description", border_style="green"))
-            console.print("\n[dim]This context is automatically applied to all agents when installed.[/dim]")
+            console.print("[red]❌ Failed to refresh library[/red]")
     
-    finally:
-        library_manager.shutdown()
-
-
-@cli.command("install-global")
-def install_global_contexts() -> None:
-    """Install global contexts and create/update global_context.json."""
-    from .core.profile_installer import ProfileInstaller
-    
-    installer = ProfileInstaller()
-    
-    with console.status("[bold green]Installing global contexts..."):
-        success = installer.install_global_contexts()
-    
-    if success:
-        console.print("[green]✓[/green] Global contexts installed successfully")
-        console.print("[dim]Global contexts are now available for all Amazon Q agents[/dim]")
-    else:
-        console.print("[red]✗[/red] Failed to install global contexts")
-
-
-@cli.command("remove-global")
-@click.confirmation_option(prompt="Are you sure you want to remove all global contexts?")
-def remove_global_contexts() -> None:
-    """Remove global contexts and clean up global_context.json."""
-    from .core.profile_installer import ProfileInstaller
-    
-    installer = ProfileInstaller()
-    
-    with console.status("[bold yellow]Removing global contexts..."):
-        success = installer.remove_global_contexts()
-    
-    if success:
-        console.print("[green]✓[/green] Global contexts removed successfully")
-        console.print("[dim]Global contexts are no longer available for Amazon Q agents[/dim]")
-    else:
-        console.print("[red]✗[/red] Failed to remove global contexts")
+    except Exception as e:
+        console.print(f"[red]Error: {e}[/red]")
 
 
 def main():
