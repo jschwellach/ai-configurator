@@ -1,8 +1,0 @@
-name: "Engagement Manager Profile"
-description: "Complete profile for engagement managers with client communication, project delivery, and management contexts"
-version: "1.0.0"
-contexts:
-  - "client-communication.md"
-  - "engagement-management.md"
-hooks:
-  - "engagement-manager-context.yaml"

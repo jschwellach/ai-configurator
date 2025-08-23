@@ -1,6 +1,0 @@
-name: "Developer Profile"
-description: "Complete profile for software developers with development guidelines and best practices"
-version: "1.0.0"
-contexts: []
-hooks:
-  - "context-loader.yaml"

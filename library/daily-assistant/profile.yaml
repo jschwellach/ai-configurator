@@ -1,6 +1,0 @@
-name: "Default Profile"
-description: "Basic profile configuration with minimal context for general use"
-version: "1.0.0"
-contexts:
-  - "daily-assistant.md"
-hooks: []
