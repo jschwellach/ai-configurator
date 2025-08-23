@@ -1,264 +1,407 @@
-"""Final simplified CLI interface for AI Configurator - Agent-based version."""
+"""
+AI Configurator CLI - Tool-agnostic knowledge library manager.
+"""
 
+import argparse
 import json
-import click
-from rich.console import Console
-from rich.table import Table
-from rich.panel import Panel
+import sys
+from typing import List, Optional
 
-from ai_configurator import __version__
-from ai_configurator.core.config_library_manager import ConfigLibraryManager
-from ai_configurator.core.agent_installer import AgentInstaller
-
-console = Console()
+from ai_configurator.core.library_manager import LibraryManager
+from ai_configurator.core.agent_manager import AgentManager
 
 
-@click.group()
-@click.version_option(version=__version__)
-@click.option(
-    "--verbose", "-v", 
-    is_flag=True, 
-    help="Enable verbose output"
-)
-@click.option(
-    "--quiet", "-q", 
-    is_flag=True, 
-    help="Suppress non-error output"
-)
-def cli(verbose: bool, quiet: bool) -> None:
-    """AI Configurator - Install profiles as Amazon Q CLI agents."""
-    # Set up logging based on verbosity
-    if verbose:
-        import logging
-        logging.basicConfig(level=logging.DEBUG)
-    elif quiet:
-        import logging
-        logging.basicConfig(level=logging.ERROR)
+def format_output(data, format_type: str = "table"):
+    """Format output based on requested format."""
+    if format_type == "json":
+        return json.dumps(data, indent=2)
+    return data
 
 
-@cli.command("list")
-@click.option("--query", "-q", help="Search query")
-@click.option("--format", "-f", type=click.Choice(["table", "json"]), default="table", help="Output format")
-def list_profiles(query: str, format: str) -> None:
-    """List available profiles."""
-    library_manager = ConfigLibraryManager()
-    installer = AgentInstaller(library_manager)
+def cmd_library_list(args):
+    """List all knowledge files in the library."""
+    library = LibraryManager()
+    categories = library.list_categories()
     
-    try:
-        profiles = library_manager.get_profiles()
-        
-        # Apply search filter if provided
-        if query:
-            query_lower = query.lower()
-            profiles = [
-                p for p in profiles 
-                if query_lower in p.name.lower() or query_lower in p.description.lower() or query_lower in p.id.lower()
-            ]
-        
-        if not profiles:
-            console.print("No profiles found matching the criteria.")
-            return
-        
-        if format == "json":
-            profiles_data = [
-                {
-                    "id": profile.id,
-                    "name": profile.name,
-                    "description": profile.description,
-                    "version": profile.version,
-                    "installed": installer.is_profile_installed(profile.id)
-                }
-                for profile in profiles
-            ]
-            console.print(json.dumps(profiles_data, indent=2))
+    if args.format == "json":
+        print(json.dumps(categories, indent=2))
+        return
+    
+    print("Knowledge Library Contents:")
+    print("=" * 50)
+    
+    total_files = 0
+    for category, files in categories.items():
+        print(f"\n📁 {category.upper()}")
+        print("-" * 30)
+        for file_path in files:
+            print(f"  📄 {file_path}")
+        total_files += len(files)
+    
+    print(f"\nTotal: {total_files} knowledge files across {len(categories)} categories")
+
+
+def cmd_library_sync(args):
+    """Sync library from source to config directory."""
+    library = LibraryManager()
+    if library.sync_library():
+        print("✅ Library synced successfully")
+    else:
+        print("❌ Failed to sync library")
+        sys.exit(1)
+
+
+def cmd_library_info(args):
+    """Show library information."""
+    library = LibraryManager()
+    info = library.get_library_info()
+    
+    if args.format == "json":
+        print(json.dumps(info, indent=2))
+        return
+    
+    print("Library Information:")
+    print("=" * 40)
+    print(f"Source Path: {info.get('source_path', 'N/A')}")
+    print(f"Library Path: {info.get('library_path', 'N/A')}")
+    print(f"Total Files: {info.get('total_files', 0)}")
+    print(f"Categories: {len(info.get('categories', {}))}")
+    print(f"Roles: {len(info.get('roles', []))}")
+    print(f"Synced: {'✅' if info.get('synced') else '❌'}")
+
+
+def cmd_library_search(args):
+    """Search library content."""
+    library = LibraryManager()
+    matches = library.search_files(args.query)
+    
+    if args.format == "json":
+        print(json.dumps(matches, indent=2))
+        return
+    
+    print(f"Search results for '{args.query}':")
+    print("=" * 40)
+    
+    if not matches:
+        print("No matches found")
+        return
+    
+    for match in matches:
+        print(f"  📄 {match}")
+    
+    print(f"\nFound {len(matches)} matches")
+
+
+def cmd_create_agent(args):
+    """Create a new agent."""
+    agent_manager = AgentManager(args.tool)
+    
+    # Parse rules
+    rules = []
+    if args.rules:
+        rules = [rule.strip() for rule in args.rules.split(',')]
+    
+    # Add common files if requested
+    if args.include_common:
+        library = LibraryManager()
+        common_files = library.get_common_files()
+        rules.extend(common_files)
+    
+    # Add role files if role specified
+    if args.role:
+        library = LibraryManager()
+        role_files = library.get_role_files(args.role)
+        if role_files:
+            rules.extend(role_files)
         else:
-            table = Table(title="Available Profiles")
-            table.add_column("Name", style="cyan", width=25)
-            table.add_column("ID", style="blue", width=30)
-            table.add_column("Version", style="green", width=10)
-            table.add_column("Status", style="yellow", width=12)
-            table.add_column("Description", style="white", width=40)
+            print(f"❌ Role '{args.role}' not found")
+            sys.exit(1)
+    
+    if not rules:
+        print("❌ No rules specified. Use --rules, --role, or --include-common")
+        sys.exit(1)
+    
+    description = args.description or f"{args.name} agent created with AI Configurator"
+    
+    if agent_manager.create_agent(args.name, rules, description):
+        print(f"✅ Agent '{args.name}' created successfully")
+        if args.tool == "q-cli":
+            print(f"Use: q chat --agent {args.name}")
+    else:
+        print(f"❌ Failed to create agent '{args.name}'")
+        sys.exit(1)
+
+
+def cmd_update_agent(args):
+    """Update an existing agent."""
+    agent_manager = AgentManager(args.tool)
+    
+    if agent_manager.update_agent(args.name):
+        print(f"✅ Agent '{args.name}' updated successfully")
+    else:
+        print(f"❌ Failed to update agent '{args.name}'")
+        sys.exit(1)
+
+
+def cmd_agents_list(args):
+    """List all agents for a tool."""
+    agent_manager = AgentManager(args.tool)
+    agents = agent_manager.list_agents()
+    
+    if args.format == "json":
+        agent_data = []
+        for agent_name in agents:
+            info = agent_manager.get_agent_info(agent_name)
+            if info:
+                agent_data.append({
+                    "name": agent_name,
+                    "description": info.get("description", ""),
+                    "resources": len(info.get("resources", [])),
+                    "mcp_servers": len(info.get("mcpServers", {}))
+                })
+        print(json.dumps(agent_data, indent=2))
+        return
+    
+    if not agents:
+        print(f"No agents found for {args.tool}")
+        return
+    
+    print(f"{args.tool.upper()} Agents:")
+    print("=" * 40)
+    
+    for agent_name in agents:
+        info = agent_manager.get_agent_info(agent_name)
+        if info:
+            description = info.get("description", "No description")
+            resource_count = len(info.get("resources", []))
+            mcp_count = len(info.get("mcpServers", {}))
             
-            for profile in profiles:
-                status = "✅ Installed" if installer.is_profile_installed(profile.id) else "❌ Not Installed"
-                table.add_row(
-                    profile.name,
-                    profile.id,
-                    profile.version,
-                    status,
-                    profile.description[:37] + "..." if len(profile.description) > 40 else profile.description
-                )
+            print(f"\n🤖 {agent_name}")
+            print(f"   Description: {description}")
+            print(f"   Knowledge files: {resource_count}")
+            print(f"   MCP servers: {mcp_count}")
             
-            console.print(table)
-            console.print(f"\nFound {len(profiles)} profiles")
-            console.print("[dim]Use 'q chat --agent <ID>' to use an installed agent[/dim]")
+            if args.tool == "q-cli":
+                print(f"   Usage: q chat --agent {agent_name}")
     
-    except Exception as e:
-        console.print(f"[red]Error: {e}[/red]")
+    print(f"\nTotal: {len(agents)} agents")
 
 
-@cli.command("install")
-@click.argument("profile_id")
-def install_profile(profile_id: str) -> None:
-    """Install a profile as an Amazon Q CLI agent."""
-    library_manager = ConfigLibraryManager()
-    installer = AgentInstaller(library_manager)
+def cmd_agents_remove(args):
+    """Remove an agent."""
+    agent_manager = AgentManager(args.tool)
     
-    try:
-        # Check if profile exists
-        profile = library_manager.get_profile_by_id(profile_id)
-        if not profile:
-            console.print(f"[red]Profile '{profile_id}' not found.[/red]")
-            console.print("\nUse 'ai-config list' to see available profiles.")
-            return
-        
-        # Check if already installed
-        if installer.is_profile_installed(profile_id):
-            console.print(f"[yellow]Agent '{profile.name}' is already installed.[/yellow]")
-            console.print(f"[dim]Use: q chat --agent {profile_id}[/dim]")
-            return
-        
-        # Install the profile
-        console.print(f"Installing agent: [cyan]{profile.name}[/cyan]")
-        
-        if installer.install_profile(profile_id):
-            console.print(f"[green]✅ Successfully installed agent: {profile.name}[/green]")
-            console.print(f"[dim]Use: q chat --agent {profile_id}[/dim]")
-        else:
-            console.print(f"[red]❌ Failed to install agent: {profile.name}[/red]")
-    
-    except Exception as e:
-        console.print(f"[red]Error: {e}[/red]")
+    if agent_manager.remove_agent(args.name):
+        print(f"✅ Agent '{args.name}' removed successfully")
+    else:
+        print(f"❌ Failed to remove agent '{args.name}'")
+        sys.exit(1)
 
 
-@cli.command("remove")
-@click.argument("profile_id")
-def remove_profile(profile_id: str) -> None:
-    """Remove an installed agent."""
-    library_manager = ConfigLibraryManager()
-    installer = AgentInstaller(library_manager)
+def cmd_agents_info(args):
+    """Show agent information."""
+    agent_manager = AgentManager(args.tool)
+    info = agent_manager.get_agent_info(args.name)
     
-    try:
-        # Check if profile exists
-        profile = library_manager.get_profile_by_id(profile_id)
-        if not profile:
-            console.print(f"[red]Profile '{profile_id}' not found.[/red]")
-            return
-        
-        # Check if installed
-        if not installer.is_profile_installed(profile_id):
-            console.print(f"[yellow]Agent '{profile.name}' is not installed.[/yellow]")
-            return
-        
-        # Remove the profile
-        console.print(f"Removing agent: [cyan]{profile.name}[/cyan]")
-        
-        if installer.remove_profile(profile_id):
-            console.print(f"[green]✅ Successfully removed agent: {profile.name}[/green]")
-        else:
-            console.print(f"[red]❌ Failed to remove agent: {profile.name}[/red]")
+    if not info:
+        print(f"❌ Agent '{args.name}' not found")
+        sys.exit(1)
     
-    except Exception as e:
-        console.print(f"[red]Error: {e}[/red]")
+    if args.format == "json":
+        print(json.dumps(info, indent=2))
+        return
+    
+    print(f"Agent: {args.name}")
+    print("=" * 40)
+    print(f"Description: {info.get('description', 'No description')}")
+    print(f"Tools: {', '.join(info.get('tools', []))}")
+    print(f"Allowed Tools: {', '.join(info.get('allowedTools', []))}")
+    
+    resources = info.get("resources", [])
+    print(f"\nKnowledge Files ({len(resources)}):")
+    for resource in resources:
+        filename = resource.replace("file://", "").split("/")[-1]
+        print(f"  📄 {filename}")
+    
+    mcp_servers = info.get("mcpServers", {})
+    print(f"\nMCP Servers ({len(mcp_servers)}):")
+    for name, config in mcp_servers.items():
+        command = config.get("command", "N/A")
+        print(f"  🔧 {name}: {command}")
 
 
-@cli.command("info")
-@click.argument("profile_id")
-@click.option("--format", "-f", type=click.Choice(["panel", "json"]), default="panel", help="Output format")
-def show_info(profile_id: str, format: str) -> None:
-    """Show detailed information about a profile."""
-    library_manager = ConfigLibraryManager()
-    installer = AgentInstaller(library_manager)
+def cmd_roles_list(args):
+    """List all available roles."""
+    library = LibraryManager()
+    roles = library.list_roles()
     
-    try:
-        profile = library_manager.get_profile_by_id(profile_id)
-        
-        if not profile:
-            console.print(f"[red]Profile '{profile_id}' not found.[/red]")
-            return
-        
-        is_installed = installer.is_profile_installed(profile_id)
-        
-        if format == "json":
-            profile_data = {
-                "id": profile.id,
-                "name": profile.name,
-                "description": profile.description,
-                "version": profile.version,
-                "installed": is_installed
-            }
-            console.print(json.dumps(profile_data, indent=2))
-        else:
-            # Show installation status
-            status = "[green]✅ Installed[/green]" if is_installed else "[red]❌ Not Installed[/red]"
-            
-            console.print(Panel(f"[bold cyan]{profile.name}[/bold cyan] - {status}", title="Agent", border_style="cyan"))
-            console.print(f"[bold]ID:[/bold] {profile.id}")
-            console.print(f"[bold]Version:[/bold] {profile.version}")
-            console.print(Panel(profile.description, title="Description", border_style="green"))
-            
-            if not is_installed:
-                console.print(f"\n[dim]To install: ai-config install {profile.id}[/dim]")
-                console.print(f"[dim]Then use: q chat --agent {profile.id}[/dim]")
-            else:
-                console.print(f"\n[dim]To use: q chat --agent {profile.id}[/dim]")
-                console.print(f"[dim]To remove: ai-config remove {profile.id}[/dim]")
+    if args.format == "json":
+        role_data = []
+        for role in roles:
+            files = library.get_role_files(role)
+            role_data.append({
+                "name": role,
+                "files": files,
+                "file_count": len(files)
+            })
+        print(json.dumps(role_data, indent=2))
+        return
     
-    except Exception as e:
-        console.print(f"[red]Error: {e}[/red]")
-
-
-@cli.command("agents")
-@click.option("--format", "-f", type=click.Choice(["table", "json"]), default="table", help="Output format")
-def list_installed_agents(format: str) -> None:
-    """List installed Amazon Q CLI agents."""
-    library_manager = ConfigLibraryManager()
-    installer = AgentInstaller(library_manager)
+    if not roles:
+        print("No roles found")
+        return
     
-    try:
-        installed_agents = installer.list_installed_agents()
-        
-        if not installed_agents:
-            console.print("No agents are currently installed.")
-            console.print("[dim]Use 'ai-config install <profile-id>' to install an agent[/dim]")
-            return
-        
-        if format == "json":
-            console.print(json.dumps(installed_agents, indent=2))
-        else:
-            table = Table(title="Installed Amazon Q CLI Agents")
-            table.add_column("Agent ID", style="cyan", width=30)
-            table.add_column("Usage", style="green", width=50)
-            
-            for agent_id in installed_agents:
-                table.add_row(agent_id, f"q chat --agent {agent_id}")
-            
-            console.print(table)
-            console.print(f"\nFound {len(installed_agents)} installed agents")
+    print("Available Roles:")
+    print("=" * 30)
     
-    except Exception as e:
-        console.print(f"[red]Error: {e}[/red]")
-
-
-@cli.command("refresh")
-def refresh_library() -> None:
-    """Refresh the library from source."""
-    library_manager = ConfigLibraryManager()
+    for role in roles:
+        files = library.get_role_files(role)
+        print(f"\n👤 {role}")
+        print(f"   Files: {len(files)}")
+        for file_path in files:
+            filename = file_path.split("/")[-1]
+            print(f"     📄 {filename}")
     
-    try:
-        console.print("Refreshing library from source...")
-        if library_manager.refresh_library():
-            console.print("[green]✅ Library refreshed successfully[/green]")
-        else:
-            console.print("[red]❌ Failed to refresh library[/red]")
-    
-    except Exception as e:
-        console.print(f"[red]Error: {e}[/red]")
+    print(f"\nTotal: {len(roles)} roles")
 
 
 def main():
-    """Main entry point for the CLI."""
-    cli()
+    """Main CLI entry point."""
+    parser = argparse.ArgumentParser(
+        description="AI Configurator - Tool-agnostic knowledge library manager",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  # Library management
+  ai-config library list
+  ai-config library sync
+  ai-config library search "aws security"
+  
+  # Agent creation
+  ai-config create-agent --name my-dev --role software-engineer --tool q-cli
+  ai-config create-agent --name architect --rules "roles/software-architect/,domains/aws-best-practices.md" --tool q-cli
+  
+  # Agent management
+  ai-config agents list --tool q-cli
+  ai-config update-agent --name my-dev --tool q-cli
+  ai-config agents remove --name my-dev --tool q-cli
+        """
+    )
+    
+    parser.add_argument("--format", choices=["table", "json"], default="table",
+                       help="Output format")
+    
+    subparsers = parser.add_subparsers(dest="command", help="Available commands")
+    
+    # Library commands
+    library_parser = subparsers.add_parser("library", help="Library management")
+    library_subparsers = library_parser.add_subparsers(dest="library_command")
+    
+    library_subparsers.add_parser("list", help="List all knowledge files")
+    library_subparsers.add_parser("sync", help="Sync library from source")
+    library_subparsers.add_parser("info", help="Show library information")
+    
+    search_parser = library_subparsers.add_parser("search", help="Search library content")
+    search_parser.add_argument("query", help="Search query")
+    
+    # Agent creation
+    create_parser = subparsers.add_parser("create-agent", help="Create a new agent")
+    create_parser.add_argument("--name", required=True, help="Agent name")
+    create_parser.add_argument("--rules", help="Comma-separated list of rule files")
+    create_parser.add_argument("--role", help="Role to include (adds all role files)")
+    create_parser.add_argument("--include-common", action="store_true", 
+                              help="Include common organizational files")
+    create_parser.add_argument("--description", help="Agent description")
+    create_parser.add_argument("--tool", default="q-cli", 
+                              choices=["q-cli", "claude-code", "chatgpt"],
+                              help="Target tool")
+    
+    # Agent management
+    update_parser = subparsers.add_parser("update-agent", help="Update an existing agent")
+    update_parser.add_argument("--name", required=True, help="Agent name")
+    update_parser.add_argument("--tool", default="q-cli", 
+                              choices=["q-cli", "claude-code", "chatgpt"],
+                              help="Target tool")
+    
+    # Agents commands
+    agents_parser = subparsers.add_parser("agents", help="Agent management")
+    agents_subparsers = agents_parser.add_subparsers(dest="agents_command")
+    
+    agents_list_parser = agents_subparsers.add_parser("list", help="List all agents")
+    agents_list_parser.add_argument("--tool", default="q-cli",
+                                   choices=["q-cli", "claude-code", "chatgpt"],
+                                   help="Target tool")
+    
+    agents_remove_parser = agents_subparsers.add_parser("remove", help="Remove an agent")
+    agents_remove_parser.add_argument("--name", required=True, help="Agent name")
+    agents_remove_parser.add_argument("--tool", default="q-cli",
+                                     choices=["q-cli", "claude-code", "chatgpt"],
+                                     help="Target tool")
+    
+    agents_info_parser = agents_subparsers.add_parser("info", help="Show agent information")
+    agents_info_parser.add_argument("--name", required=True, help="Agent name")
+    agents_info_parser.add_argument("--tool", default="q-cli",
+                                   choices=["q-cli", "claude-code", "chatgpt"],
+                                   help="Target tool")
+    
+    # Roles commands
+    roles_parser = subparsers.add_parser("roles", help="Role management")
+    roles_subparsers = roles_parser.add_subparsers(dest="roles_command")
+    roles_subparsers.add_parser("list", help="List all available roles")
+    
+    args = parser.parse_args()
+    
+    if not args.command:
+        parser.print_help()
+        return
+    
+    try:
+        # Library commands
+        if args.command == "library":
+            if args.library_command == "list":
+                cmd_library_list(args)
+            elif args.library_command == "sync":
+                cmd_library_sync(args)
+            elif args.library_command == "info":
+                cmd_library_info(args)
+            elif args.library_command == "search":
+                cmd_library_search(args)
+            else:
+                library_parser.print_help()
+        
+        # Agent creation
+        elif args.command == "create-agent":
+            cmd_create_agent(args)
+        elif args.command == "update-agent":
+            cmd_update_agent(args)
+        
+        # Agents commands
+        elif args.command == "agents":
+            if args.agents_command == "list":
+                cmd_agents_list(args)
+            elif args.agents_command == "remove":
+                cmd_agents_remove(args)
+            elif args.agents_command == "info":
+                cmd_agents_info(args)
+            else:
+                agents_parser.print_help()
+        
+        # Roles commands
+        elif args.command == "roles":
+            if args.roles_command == "list":
+                cmd_roles_list(args)
+            else:
+                roles_parser.print_help()
+        
+        else:
+            parser.print_help()
+    
+    except KeyboardInterrupt:
+        print("\n\nOperation cancelled by user")
+        sys.exit(1)
+    except Exception as e:
+        print(f"❌ Error: {e}")
+        sys.exit(1)
 
 
 if __name__ == "__main__":

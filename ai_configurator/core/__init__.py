@@ -1,18 +1,14 @@
 """
-AI Configurator core module - Agent-based architecture.
+AI Configurator core module - Tool-agnostic library with enhanced agent system.
 """
 
-from .config_library_manager import ConfigLibraryManager
-from .agent_installer import AgentInstaller
-from .catalog_schema import LibraryCatalog, ConfigItem, BaseContext, AgentConfig
+from .library_manager import LibraryManager
+from .agent_manager import AgentManager, AgentConfig
 from . import file_utils
 
 __all__ = [
-    'ConfigLibraryManager',
-    'AgentInstaller', 
-    'LibraryCatalog',
-    'ConfigItem',
-    'BaseContext',
+    'LibraryManager',
+    'AgentManager',
     'AgentConfig',
     'file_utils'
 ]
