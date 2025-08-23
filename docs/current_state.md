@@ -1,140 +1,198 @@
 # AI Configurator - Current State Documentation
 
 **Last Updated**: 2025-08-23  
-**Status**: ✅ Production Ready - Agent-Based Architecture Fully Implemented
+**Status**: ✅ Production Ready - Tool-Agnostic Library Architecture Fully Implemented
 
 ## 🎯 Project Overview
 
-AI Configurator is a cross-platform configuration manager for Amazon Q CLI agents. It simplifies the setup and sharing of Amazon Q CLI agent configurations across teams and environments by creating Amazon Q CLI agents instead of managing context files directly.
+AI Configurator is a **tool-agnostic knowledge library manager** that creates and manages AI tool configurations. It provides a pure knowledge library that can be consumed by any AI tool (Amazon Q CLI, Claude Projects, ChatGPT, etc.) while maintaining tool-specific agent configurations separately.
 
 ## 🏗️ Current Architecture
 
-### Agent-Based System (v2.0)
-The project has been **completely migrated** from a global context system to Amazon Q Developer CLI's agent-based architecture (August 2023).
+### Tool-Agnostic Library System (v3.0)
+The project has been **completely redesigned** from an Amazon Q CLI-specific system to a tool-agnostic knowledge library (August 2023).
 
 **Key Principles:**
-- **No Global Contexts**: All context is agent-specific through `resources` field
-- **Config Directory**: Library installed to `~/.config/ai-configurator/library/`
-- **Direct References**: Agent resources use `file://` paths to library files
-- **Base Contexts**: Organizational contexts automatically included in all agents
-- **Schema Compliance**: Agent configs match official Amazon Q CLI format
+- **Pure Knowledge Library**: Tool-agnostic markdown files organized by category
+- **Tool Separation**: Tool-specific configurations separate from knowledge
+- **File References**: Agents reference library files, don't embed content
+- **Role-Based Organization**: Knowledge organized around roles with extensible folders
+- **Interactive Management**: CLI app for agent configuration with menu system
 
 ### Core Components
 
 ```
 ai-configurator/
-├── ai_configurator/           # Main package (5 core files only)
+├── ai_configurator/           # Main package (3 core files)
 │   ├── core/                  # Essential functionality
-│   │   ├── agent_installer.py      # Creates Amazon Q CLI agents
-│   │   ├── config_library_manager.py  # Manages ~/.config library
-│   │   ├── catalog_schema.py       # Agent-based data models
-│   │   ├── file_utils.py          # Essential file operations
-│   │   └── __init__.py            # Clean module exports
-│   └── cli.py                 # Agent-focused CLI interface
-├── library/                   # Configuration profiles
-│   ├── base-contexts/         # Organizational contexts (auto-included)
-│   ├── catalog.json          # Profile and base context definitions
-│   └── [profile-dirs]/       # Individual agent profiles
+│   │   ├── library_manager.py     # Tool-agnostic library management
+│   │   ├── agent_manager.py       # Multi-tool agent creation
+│   │   ├── file_utils.py          # File operations
+│   │   └── __init__.py            # Module exports
+│   └── cli.py                 # Enhanced CLI interface
+├── library/                   # Pure knowledge library
+│   ├── README.md              # Library documentation
+│   ├── common/                # Organizational knowledge
+│   ├── roles/                 # Role folders with main + additional files
+│   ├── domains/               # Domain expertise
+│   ├── tools/                 # Tool-specific knowledge
+│   └── workflows/             # Process documentation
+├── backup/                    # Preserved configurations
+│   └── mcp-servers/           # MCP server configurations
 ├── scripts/                   # Utilities
-│   └── cleanup_old_amazonq.py    # Migration cleanup tool
-├── templates/                 # Profile creation templates
+│   └── cleanup_old_amazonq.py
 └── docs/                      # Documentation
-    ├── agentic_plan.md       # Complete migration record
-    └── current_state.md      # This file
+    ├── current_state.md       # This file
+    └── library_plan.md        # Complete redesign plan
+```
+
+### User Configuration Structure
+```
+~/.config/ai-configurator/
+├── library/                   # Synced knowledge library
+├── q-cli/                     # Amazon Q CLI agents
+│   ├── agents/
+│   │   └── product-owner.json     # Agent with file references + MCP
+│   └── mcp-servers/
+├── claude-code/               # Future: Claude Projects
+└── chatgpt/                   # Future: ChatGPT configurations
 ```
 
 ## 🔧 How It Works
 
-### 1. Library Management
-- **Source**: Profiles stored in `./library/` directory
-- **Installation**: First use copies entire library to `~/.config/ai-configurator/library/`
-- **Updates**: `ai-config refresh` re-copies from source
+### 1. Knowledge Library Management
+- **Source**: Pure markdown files in `./library/` directory
+- **Categories**: common, roles, domains, tools, workflows
+- **Sync**: `ai-config library sync` copies to `~/.config/ai-configurator/library/`
+- **Discovery**: `ai-config library list` shows all available knowledge
 
 ### 2. Agent Creation Process
-1. User runs `ai-config install <profile-id>`
-2. `ConfigLibraryManager` ensures library is installed in config directory
-3. `AgentInstaller` reads profile YAML and builds resource list:
-   - Adds all base contexts first (organizational contexts)
-   - Adds profile-specific contexts from `contexts/` subdirectory
-   - All paths use absolute `file://` references to config library
-4. Creates JSON agent config in `~/.aws/amazonq/cli-agents/<profile-id>.json`
-5. Agent is ready for use with `q chat --agent <profile-id>`
+1. User runs `ai-config create-agent --name my-agent --role software-engineer --tool q-cli`
+2. `LibraryManager` ensures library is synced to config directory
+3. `AgentManager` builds resource list:
+   - Adds role files from `roles/software-engineer/`
+   - Optionally adds common organizational files
+   - Optionally adds specific domain/tool/workflow files
+   - All paths use absolute `file://` references to synced library
+4. Creates agent JSON in `~/.config/ai-configurator/q-cli/agents/my-agent.json`
+5. For q-cli tool: Also creates Amazon Q CLI agent in `~/.aws/amazonq/cli-agents/`
+6. Agent ready for use with `q chat --agent my-agent`
 
-### 3. Base Contexts (Organizational Contexts)
-Base contexts are automatically included in **every** agent and provide organization-wide knowledge:
-- **Location**: `library/base-contexts/`
-- **Purpose**: Company policies, security guidelines, common standards
-- **Implementation**: Added to every agent's `resources` array during installation
-- **Priority**: Loaded first (highest priority in catalog)
+### 3. Interactive Agent Management
+- **Update**: `ai-config update-agent --name my-agent --tool q-cli` opens interactive menu
+- **Menu Options**: Add/remove knowledge files, configure MCP servers, modify settings
+- **Knowledge Discovery**: Browse library categories and files interactively
+- **MCP Integration**: Add/remove/configure MCP servers per agent
+
+### 4. Multi-Tool Support
+- **Current**: Amazon Q CLI (q-cli) fully supported
+- **Planned**: Claude Projects (claude-code), ChatGPT (chatgpt)
+- **Architecture**: Same knowledge library, different export formats
 
 ## 📋 Available Commands
 
-### Core Commands
+### Library Management
 ```bash
-ai-config list [--query QUERY]           # List available profiles
-ai-config install PROFILE_ID             # Install profile as Amazon Q CLI agent
-ai-config remove PROFILE_ID              # Remove installed agent
-ai-config info PROFILE_ID                # Show profile details
-ai-config agents                         # List installed Amazon Q CLI agents
-ai-config refresh                        # Refresh library from source
+ai-config library list                    # List all knowledge files
+ai-config library sync                    # Sync library from source
+ai-config library info                    # Show library information
+ai-config library search "aws security"   # Search library content
+```
+
+### Agent Creation & Management
+```bash
+# Create agents
+ai-config create-agent --name my-dev --role software-engineer --tool q-cli
+ai-config create-agent --name architect --rules "roles/software-architect/,domains/aws-best-practices.md" --tool q-cli
+
+# Manage agents
+ai-config agents list --tool q-cli        # List all agents
+ai-config update-agent --name my-dev --tool q-cli  # Interactive update
+ai-config agents remove --name my-dev --tool q-cli # Remove agent
+ai-config agents info --name my-dev --tool q-cli   # Show agent details
+```
+
+### Role Discovery
+```bash
+ai-config roles list                      # List available roles
 ```
 
 ### Output Formats
 All commands support `--format json` for programmatic use.
 
-## 📚 Current Profiles
+## 📚 Current Knowledge Library
 
-### Available Profiles (as of 2025-08-23)
-- **developer-v1**: Software developers with development guidelines
-- **solutions-architect-v1**: AWS best practices and architecture patterns
-- **engagement-manager-v1**: Client communication and project delivery
-- **document-helper-v1**: Document creation and editing guidelines
-- **system-administrator-v1**: Infrastructure and operations contexts
-- **documentation-v1**: AI Configurator documentation and guides
-- **daily-assistant-v1**: General daily assistant profile
-- **research-assistant-v1**: Research methodology and citation standards
+### Library Structure (12 files, 5 categories)
 
-### Base Contexts (Applied to All Agents)
-- **defaults.md**: Basic organizational defaults
+#### Common (Organizational Knowledge) - 5 files
+- **policies.md**: Comprehensive organizational policies and standards
 - **aws-security-best-practices.md**: AWS security guidelines
 - **organizational-policies.md**: Company-wide policies
 - **common-abbreviations.md**: Standard terminology
+- **defaults.md**: Basic organizational defaults
+
+#### Roles (Role-Specific Knowledge) - 3 roles
+- **product-owner/**: Product owner knowledge and practices
+  - `product-owner.md`: Core responsibilities, skills, best practices
+- **software-architect/**: Architecture principles and patterns
+  - `software-architect.md`: System design, technical leadership, patterns
+- **software-engineer/**: Development best practices
+  - `software-engineer.md`: Coding practices, collaboration, continuous learning
+
+#### Domains (Domain Expertise) - 2 files
+- **aws-best-practices.md**: Comprehensive AWS Well-Architected practices
+- **security.md**: Security best practices across all domains
+
+#### Tools (Tool-Specific Knowledge) - 1 file
+- **git.md**: Git workflows, branching strategies, best practices
+
+#### Workflows (Process Documentation) - 1 file
+- **code-review.md**: Complete code review workflow and guidelines
+
+### MCP Server Integration
+- **Preserved**: 4 MCP servers from previous system
+- **Integration**: Automatically added to new agents
+- **Servers**: fetch, awslabs.core-mcp-server, aws-documentation-mcp-server, cdk-mcp-server
 
 ## 🔄 Migration History
 
-### Major Migration (August 2023)
-**From**: Global context system with `~/.aws/amazonq/contexts/` and `global_context.json`  
-**To**: Agent-based system with `~/.aws/amazonq/cli-agents/` JSON configs
+### Major Redesign (August 2023)
+**From**: Amazon Q CLI-specific agent system with complex profiles and catalogs  
+**To**: Tool-agnostic knowledge library with multi-tool agent support
 
 **Key Changes Made:**
-1. ✅ **Removed Global Context Support**
-   - Deleted `install_global_contexts()` and `remove_global_contexts()` methods
-   - Updated catalog schema: `global_contexts` → `base_contexts`
-   - Renamed `library/global-contexts/` → `library/base-contexts/`
+1. ✅ **Complete Library Restructure**
+   - Removed complex YAML profiles, catalogs, and configurations
+   - Created pure markdown knowledge library organized by category
+   - Implemented role folders with main files + additional configurations
+   - Moved organizational knowledge to `common/` category
 
-2. ✅ **Updated Agent Configuration**
-   - `AgentConfig` schema matches official Amazon Q CLI format
-   - Removed deprecated fields (`useLegacyMcpJson`)
-   - Added proper MCP server configuration support
-   - Default tools: `["*"]` with `fs_read` pre-approved
+2. ✅ **New Agent Architecture**
+   - `LibraryManager`: Tool-agnostic library management in config directory
+   - `AgentManager`: Multi-tool agent creation with file references
+   - File reference system using absolute `file://` paths
+   - Interactive agent management with menu system
 
-3. ✅ **Restructured Installation Process**
-   - No more context file copying to Amazon Q directories
-   - Direct file references using `file://` paths
-   - Library installed to `~/.config/ai-configurator/library/`
+3. ✅ **Enhanced CLI Interface**
+   - Complete CLI rewrite for new architecture
+   - Library management commands (list, sync, search, info)
+   - Agent creation with role and rule selection
+   - Interactive agent updates with menu system
+   - Multi-tool support (q-cli, claude-code, chatgpt)
 
-4. ✅ **Updated CLI Interface**
-   - Replaced `LibraryManager`/`ProfileInstaller` with `ConfigLibraryManager`/`AgentInstaller`
-   - Added `agents` and `refresh` commands
-   - Updated messaging for agent-based workflow
+4. ✅ **MCP Server Preservation**
+   - Backed up existing MCP configurations
+   - Integrated MCP servers into new agent system
+   - Interactive MCP server management per agent
 
 5. ✅ **Project Cleanup**
-   - Removed 70,000+ lines of obsolete code
-   - Deleted 15+ backup directories and old files
-   - Streamlined from 37+ modules to 5 core files
+   - Removed 70,000+ lines of obsolete code (previous migration)
+   - Removed additional complex systems (profiles, catalogs, workflows)
+   - Streamlined to 3 core files: library_manager, agent_manager, file_utils
 
-**Migration Branch**: `feature/agent-migration` (merged to main)  
-**Documentation**: Complete plan in `docs/agentic_plan.md`
+**Migration Branches**: 
+- `feature/agent-migration` (v1→v2): Global contexts to agent-based
+- `feature/library-redesign` (v2→v3): Agent-specific to tool-agnostic
 
 ## 🛠️ Development Setup
 
@@ -145,83 +203,94 @@ cd ai-configurator
 pip install -r requirements-dev.txt
 pip install -e .
 
-# Test installation
-ai-config list
-ai-config install documentation-v1
-q chat --agent documentation-v1
+# Test new system
+ai-config library list
+ai-config create-agent --name test --role software-engineer --tool q-cli
+ai-config agents list --tool q-cli
+q chat --agent test
 ```
 
 ### Testing
 ```bash
 pytest                    # Run test suite
-ai-config list           # Test CLI functionality
+ai-config library sync   # Test library management
+ai-config roles list     # Test role discovery
 ```
 
 ## 📖 Key Files to Understand
 
 ### Core Implementation
-- **`ai_configurator/cli.py`**: Main CLI interface, all user commands
-- **`ai_configurator/core/agent_installer.py`**: Creates Amazon Q CLI agents
-- **`ai_configurator/core/config_library_manager.py`**: Manages library installation
-- **`ai_configurator/core/catalog_schema.py`**: Data models (AgentConfig, BaseContext, etc.)
+- **`ai_configurator/cli.py`**: Complete CLI interface with all commands
+- **`ai_configurator/core/library_manager.py`**: Tool-agnostic library management
+- **`ai_configurator/core/agent_manager.py`**: Multi-tool agent creation and management
+- **`ai_configurator/core/file_utils.py`**: Essential file operations
 
-### Configuration
-- **`library/catalog.json`**: Defines all profiles and base contexts
-- **`library/base-contexts/`**: Organizational contexts applied to all agents
-- **`library/[profile]/profile.yaml`**: Individual profile configurations
+### Knowledge Library
+- **`library/README.md`**: Library overview and usage instructions
+- **`library/common/`**: Organizational knowledge applied to all agents
+- **`library/roles/`**: Role-specific knowledge folders
+- **`library/domains/`, `tools/`, `workflows/`**: Categorized expertise
 
 ### Documentation
-- **`docs/agentic_plan.md`**: Complete migration plan and implementation details
-- **`README.md`**: User-facing documentation and quick start guide
-- **`templates/`**: Templates for creating new profiles
+- **`docs/library_plan.md`**: Complete redesign plan and implementation details
+- **`docs/current_state.md`**: This file - current system overview
 
 ## 🔮 Future Enhancements
 
 ### Planned Features
-1. **MCP Server Support**: Add MCP server configuration to profiles
-2. **Agent Inheritance**: Allow agents to extend other agents
-3. **Profile Versioning**: Better version management system
-4. **Validation**: Enhanced agent config validation against Amazon Q CLI schema
+1. **Multi-Tool Export**: Claude Projects and ChatGPT support
+2. **Enhanced Collections**: Folder-based knowledge combinations
+3. **Library Browsing**: Interactive knowledge discovery
+4. **Template System**: Templates for creating new knowledge files
+5. **Validation**: Enhanced agent config validation
+6. **Versioning**: Better library versioning and rollback
 
 ### Technical Debt
 - Some test files still reference old system (need updating)
-- MCP server integration not yet implemented
-- Profile creation workflow could be streamlined
+- Multi-tool export not yet implemented
+- Collection management could be enhanced
 
 ## 🚨 Important Notes
 
 ### For New Sessions
-- **Architecture**: Agent-based system, no global contexts
-- **Installation**: Profiles become Amazon Q CLI agents in `~/.aws/amazonq/cli-agents/`
-- **Library**: Managed in `~/.config/ai-configurator/library/`
-- **Base Contexts**: Automatically included in all agents
-- **Usage**: `q chat --agent <profile-id>` to use installed agents
+- **Architecture**: Tool-agnostic knowledge library with multi-tool agent support
+- **Library**: Pure markdown files in categorized folders
+- **Agents**: Tool-specific configurations with file references
+- **Usage**: `ai-config create-agent` → `q chat --agent <name>`
+- **Management**: Interactive `update-agent` with menu system
 
-### Migration Status
-- ✅ **Complete**: All functionality migrated and tested
-- ✅ **Clean**: Project cleaned of obsolete files
-- ✅ **Production Ready**: Fully operational on main branch
-- ⚠️ **Old Configs**: Users may need to run cleanup script for old installations
+### Current Status
+- ✅ **Fully Operational**: Library management, agent creation, Amazon Q CLI integration
+- ✅ **Tested**: All core functionality working (12 knowledge files, 3 roles, MCP integration)
+- ✅ **Clean Architecture**: Streamlined from complex system to 3 core files
+- ⚠️ **Multi-Tool**: Only Amazon Q CLI currently supported (Claude/ChatGPT planned)
 
 ### Dependencies
-- **Amazon Q Developer CLI**: Must support agent-based architecture (v2+)
+- **Amazon Q Developer CLI**: v2+ with agent support
 - **Python**: 3.8+ required
 - **Operating Systems**: Windows, macOS, Linux supported
 
 ## 📞 Support & Resources
 
 ### Getting Help
-- **Documentation Agent**: `ai-config install documentation-v1`
-- **Migration Issues**: Use `scripts/cleanup_old_amazonq.py`
-- **Development**: See `CONTRIBUTING.md`
+- **Library Discovery**: `ai-config library list` and `ai-config roles list`
+- **Agent Management**: `ai-config agents list --tool q-cli`
+- **Interactive Updates**: `ai-config update-agent --name <agent> --tool q-cli`
 
 ### Key Resources
-- **Official Amazon Q CLI Docs**: https://docs.aws.amazon.com/amazonq/latest/qdeveloper-ug/command-line.html
+- **Library Plan**: Complete redesign documentation in `docs/library_plan.md`
+- **Amazon Q CLI Docs**: https://docs.aws.amazon.com/amazonq/latest/qdeveloper-ug/command-line.html
 - **Agent Schema**: https://raw.githubusercontent.com/aws/amazon-q-developer-cli/refs/heads/main/schemas/agent-v1.json
-- **Context Management**: https://docs.aws.amazon.com/amazonq/latest/qdeveloper-ug/command-line-context.html
 
 ---
 
-**Status**: ✅ **Production Ready** - Agent-based architecture fully implemented and operational.
+**Status**: ✅ **Production Ready** - Tool-agnostic library architecture fully implemented and operational.
 
-**Last Major Update**: August 2023 - Complete migration to agent-based system aligned with Amazon Q Developer CLI v2+.
+**Last Major Update**: August 2023 - Complete redesign to tool-agnostic knowledge library with multi-tool agent support.
+
+**Current Capabilities**: 
+- 📚 12 knowledge files across 5 categories
+- 👥 3 role-based configurations  
+- 🤖 Multi-tool agent creation (Amazon Q CLI active)
+- 🔧 4 MCP servers integrated
+- 🎛️ Interactive agent management
