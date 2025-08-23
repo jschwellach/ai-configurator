@@ -50,15 +50,15 @@ class AgentInstaller:
             # Build resource list
             resources = []
             
-            # Add global contexts first (our "base contexts")
-            global_contexts = self.library_manager.get_global_contexts()
-            for global_context in global_contexts:
-                global_context_path = self.library_manager.get_global_context_file_path(global_context)
-                if global_context_path.exists():
-                    resources.append(f"file://{global_context_path.absolute()}")
-                    self.logger.info(f"Added global context: {global_context.name}")
+            # Add base contexts first (our "organizational contexts")
+            base_contexts = self.library_manager.get_base_contexts()
+            for base_context in base_contexts:
+                base_context_path = self.library_manager.get_base_context_file_path(base_context)
+                if base_context_path.exists():
+                    resources.append(f"file://{base_context_path.absolute()}")
+                    self.logger.info(f"Added base context: {base_context.name}")
                 else:
-                    self.logger.warning(f"Global context file not found: {global_context_path}")
+                    self.logger.warning(f"Base context file not found: {base_context_path}")
             
             # Add profile-specific contexts
             contexts = profile_data.get('contexts', [])

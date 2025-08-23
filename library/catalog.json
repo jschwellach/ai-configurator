@@ -1,12 +1,12 @@
 {
     "version": "1.0.0",
-    "global_contexts": [
+    "base_contexts": [
         {
             "id": "Defaults",
             "name": "Defaults",
-            "description": "Defaults",
+            "description": "Default organizational contexts applied to all agents",
             "version": "1.0.0",
-            "file_path": "global-contexts/defaults.md",
+            "file_path": "base-contexts/defaults.md",
             "priority": 1000
         }
     ],

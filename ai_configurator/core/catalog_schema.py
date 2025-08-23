@@ -62,11 +62,21 @@ class AgentConfig(BaseModel):
         populate_by_name = True
 
 
+class BaseContext(BaseModel):
+    """Base context that gets included in all agents."""
+    id: str
+    name: str
+    description: str
+    version: str
+    file_path: str
+    priority: int = Field(default=0, description="Priority for context loading (higher = loaded first)")
+
+
 class LibraryCatalog(BaseModel):
-    """Simplified library catalog structure."""
+    """Simplified library catalog structure for agent-based system."""
     version: str = "1.0.0"
     profiles: List[ConfigItem] = Field(default_factory=list)
-    global_contexts: List[GlobalContext] = Field(default_factory=list)
+    base_contexts: List[BaseContext] = Field(default_factory=list)
 
 
 # JSON Schema for validation
@@ -93,7 +103,7 @@ CATALOG_SCHEMA = {
                 "required": ["id", "name", "description", "version", "file_path"]
             }
         },
-        "global_contexts": {
+        "base_contexts": {
             "type": "array",
             "items": {
                 "type": "object",

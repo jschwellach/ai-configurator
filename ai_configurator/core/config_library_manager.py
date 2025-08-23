@@ -9,7 +9,7 @@ import shutil
 from pathlib import Path
 from typing import Optional, List
 
-from .catalog_schema import LibraryCatalog, ConfigItem, GlobalContext
+from .catalog_schema import LibraryCatalog, ConfigItem, BaseContext
 from .file_utils import ensure_directory, copy_file
 
 
@@ -82,12 +82,12 @@ class ConfigLibraryManager:
         catalog = self.get_catalog()
         return catalog.profiles if catalog else []
     
-    def get_global_contexts(self) -> List[GlobalContext]:
-        """Get all global contexts sorted by priority (highest first)."""
+    def get_base_contexts(self) -> List[BaseContext]:
+        """Get all base contexts sorted by priority (highest first)."""
         catalog = self.get_catalog()
         if not catalog:
             return []
-        return sorted(catalog.global_contexts, key=lambda x: x.priority, reverse=True)
+        return sorted(catalog.base_contexts, key=lambda x: x.priority, reverse=True)
     
     def get_profile_by_id(self, profile_id: str) -> Optional[ConfigItem]:
         """Get a specific profile by ID."""
@@ -101,9 +101,9 @@ class ConfigLibraryManager:
             return None
         return self.config_library_path / profile.file_path
     
-    def get_global_context_file_path(self, global_context: GlobalContext) -> Path:
-        """Get the file path for a global context."""
-        return self.config_library_path / global_context.file_path
+    def get_base_context_file_path(self, base_context: BaseContext) -> Path:
+        """Get the file path for a base context."""
+        return self.config_library_path / base_context.file_path
     
     def refresh_library(self) -> bool:
         """Refresh the library from source (re-install)."""
