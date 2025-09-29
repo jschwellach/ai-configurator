@@ -33,14 +33,21 @@
       },
       "disabled": false,
       "autoApprove": []
+    },
+    "codegraph": {
+      "command": "npx",
+      "args": ["-y", "@cartographai/mcp-server-codegraph", "/path/to/directory"],
+      "env": {},
+      "disabled": false,
+      "autoApprove": []
     }
   },
   "toolsSettings": {
     "fs_write": {
-      "allowedPaths": ["./docs/**", "./requirements/**", "./user-stories/**"]
+      "allowedPaths": ["./docs/**", "./architecture/**", "./diagrams/**"]
     },
     "fs_read": {
-      "allowedPaths": ["./docs/**", "./requirements/**", "./user-stories/**", "./README.md"]
+      "allowedPaths": ["./docs/**", "./architecture/**", "./src/**", "./README.md"]
     },
     "execute_bash": {
       "allowedCommands": [

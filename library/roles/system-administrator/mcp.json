@@ -37,22 +37,31 @@
   },
   "toolsSettings": {
     "fs_write": {
-      "allowedPaths": ["./docs/**", "./requirements/**", "./user-stories/**"]
+      "allowedPaths": ["./scripts/**", "./configs/**", "./logs/**"]
     },
     "fs_read": {
-      "allowedPaths": ["./docs/**", "./requirements/**", "./user-stories/**", "./README.md"]
+      "allowedPaths": ["./scripts/**", "./configs/**", "./logs/**", "./README.md"]
     },
     "execute_bash": {
       "allowedCommands": [
-        "git status",
-        "git log --oneline -10"
+        "systemctl status *",
+        "ps aux",
+        "df -h",
+        "free -h",
+        "uptime",
+        "git status"
       ],
       "allowReadOnly": true
+    },
+    "use_aws": {
+      "allowedServices": ["ec2", "s3", "cloudwatch", "iam", "systems-manager"]
     }
   },
   "allowedTools": [
     "fs_read",
     "fs_write",
+    "execute_bash",
+    "use_aws",
     "thinking",
     "todo_list"
   ]

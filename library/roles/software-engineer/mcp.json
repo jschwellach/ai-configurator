@@ -1,29 +1,42 @@
 {
   "mcpServers": {
-    "git": {
+    "fetch": {
       "command": "uvx",
-      "args": ["mcp-git"],
-      "env": {
-        "LOG_LEVEL": "INFO"
-      },
+      "args": ["mcp-server-fetch"],
+      "env": {},
       "disabled": false,
-      "autoApprove": [
-        "git_status",
-        "git_log",
-        "git_diff"
-      ]
+      "autoApprove": []
     },
-    "filesystem": {
-      "command": "uvx", 
-      "args": ["mcp-filesystem"],
+    "awslabs.core-mcp-server": {
+      "command": "uvx",
+      "args": ["awslabs.core-mcp-server@latest"],
       "env": {
-        "LOG_LEVEL": "INFO"
+        "FASTMCP_LOG_LEVEL": "ERROR"
       },
       "disabled": false,
-      "autoApprove": [
-        "read_file",
-        "list_directory"
-      ]
+      "autoApprove": []
+    },
+    "browser": {
+      "command": "npx",
+      "args": ["@agent-infra/mcp-server-browser@latest"]
+    },
+    "awslabs.aws-documentation-mcp-server": {
+      "command": "uvx",
+      "args": ["awslabs.aws-documentation-mcp-server@latest"],
+      "env": {
+        "FASTMCP_LOG_LEVEL": "ERROR"
+      },
+      "disabled": false,
+      "autoApprove": []
+    },
+    "awslabs.cdk-mcp-server": {
+      "command": "uvx",
+      "args": ["awslabs.cdk-mcp-server@latest"],
+      "env": {
+        "FASTMCP_LOG_LEVEL": "ERROR"
+      },
+      "disabled": false,
+      "autoApprove": []
     }
   },
   "toolsSettings": {
@@ -44,23 +57,13 @@
         "mvn test"
       ],
       "allowReadOnly": true
-    },
-    "@git/git_status": {},
-    "@git/git_log": {},
-    "@git/git_diff": {},
-    "@filesystem/read_file": {},
-    "@filesystem/list_directory": {}
+    }
   },
   "allowedTools": [
     "fs_read",
     "fs_write", 
     "execute_bash",
     "thinking",
-    "todo_list",
-    "@git/git_status",
-    "@git/git_log", 
-    "@git/git_diff",
-    "@filesystem/read_file",
-    "@filesystem/list_directory"
+    "todo_list"
   ]
 }
