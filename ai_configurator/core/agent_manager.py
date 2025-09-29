@@ -20,6 +20,7 @@ class AgentConfig:
         self.tools = ["*"]
         self.allowed_tools = ["fs_read"]
         self.mcp_servers = {}
+        self.tools_settings = {}
     
     def add_resource(self, file_path: str):
         """Add a resource file to the agent."""
@@ -28,6 +29,20 @@ class AgentConfig:
     def add_mcp_server(self, name: str, config: Dict[str, Any]):
         """Add an MCP server configuration."""
         self.mcp_servers[name] = config
+    
+    def merge_mcp_config(self, mcp_config: Dict[str, Any]):
+        """Merge MCP configuration from role."""
+        if "mcpServers" in mcp_config:
+            self.mcp_servers.update(mcp_config["mcpServers"])
+        
+        if "toolsSettings" in mcp_config:
+            self.tools_settings.update(mcp_config["toolsSettings"])
+        
+        if "allowedTools" in mcp_config:
+            # Merge allowed tools, avoiding duplicates
+            for tool in mcp_config["allowedTools"]:
+                if tool not in self.allowed_tools:
+                    self.allowed_tools.append(tool)
     
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary for JSON serialization."""
@@ -42,6 +57,9 @@ class AgentConfig:
         
         if self.mcp_servers:
             config["mcpServers"] = self.mcp_servers
+        
+        if self.tools_settings:
+            config["toolsSettings"] = self.tools_settings
         
         return config
 
@@ -78,6 +96,9 @@ class AgentManager:
                     agent.add_resource(str(file_path))
                 else:
                     print(f"Warning: Rule file not found: {rule}")
+            
+            # Load role-specific MCP configurations
+            self._add_role_mcp_configs(agent, rules)
             
             # Load and add MCP servers from backup if available
             self._add_default_mcp_servers(agent)
@@ -186,6 +207,17 @@ class AgentManager:
                 return json.load(f)
         except Exception:
             return None
+    
+    def _add_role_mcp_configs(self, agent: AgentConfig, rules: List[str]):
+        """Add MCP configurations from role files."""
+        for rule in rules:
+            # Extract role name from rule path (e.g., "roles/software-engineer/software-engineer.md")
+            if rule.startswith("roles/") and "/" in rule:
+                role_name = rule.split("/")[1]
+                mcp_config = self.library_manager.get_role_mcp_config(role_name)
+                if mcp_config:
+                    agent.merge_mcp_config(mcp_config)
+                    print(f"Loaded MCP config for role: {role_name}")
     
     def _add_default_mcp_servers(self, agent: AgentConfig):
         """Add default MCP servers from backup."""

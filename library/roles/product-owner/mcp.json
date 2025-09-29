@@ -1,0 +1,41 @@
+{
+  "mcpServers": {
+    "filesystem": {
+      "command": "uvx",
+      "args": ["mcp-filesystem"],
+      "env": {
+        "LOG_LEVEL": "INFO"
+      },
+      "disabled": false,
+      "autoApprove": [
+        "read_file",
+        "list_directory"
+      ]
+    }
+  },
+  "toolsSettings": {
+    "fs_write": {
+      "allowedPaths": ["./docs/**", "./requirements/**", "./user-stories/**"]
+    },
+    "fs_read": {
+      "allowedPaths": ["./docs/**", "./requirements/**", "./user-stories/**", "./README.md"]
+    },
+    "execute_bash": {
+      "allowedCommands": [
+        "git status",
+        "git log --oneline -10"
+      ],
+      "allowReadOnly": true
+    },
+    "@filesystem/read_file": {},
+    "@filesystem/list_directory": {}
+  },
+  "allowedTools": [
+    "fs_read",
+    "fs_write",
+    "thinking",
+    "todo_list",
+    "@filesystem/read_file",
+    "@filesystem/list_directory"
+  ]
+}

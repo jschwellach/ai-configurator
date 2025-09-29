@@ -1,0 +1,66 @@
+{
+  "mcpServers": {
+    "git": {
+      "command": "uvx",
+      "args": ["mcp-git"],
+      "env": {
+        "LOG_LEVEL": "INFO"
+      },
+      "disabled": false,
+      "autoApprove": [
+        "git_status",
+        "git_log",
+        "git_diff"
+      ]
+    },
+    "filesystem": {
+      "command": "uvx", 
+      "args": ["mcp-filesystem"],
+      "env": {
+        "LOG_LEVEL": "INFO"
+      },
+      "disabled": false,
+      "autoApprove": [
+        "read_file",
+        "list_directory"
+      ]
+    }
+  },
+  "toolsSettings": {
+    "fs_write": {
+      "allowedPaths": ["./src/**", "./tests/**", "./docs/**"]
+    },
+    "fs_read": {
+      "allowedPaths": ["./src/**", "./tests/**", "./docs/**", "./README.md"]
+    },
+    "execute_bash": {
+      "allowedCommands": [
+        "git status",
+        "git log --oneline -10",
+        "git diff",
+        "npm test",
+        "python -m pytest",
+        "cargo test",
+        "mvn test"
+      ],
+      "allowReadOnly": true
+    },
+    "@git/git_status": {},
+    "@git/git_log": {},
+    "@git/git_diff": {},
+    "@filesystem/read_file": {},
+    "@filesystem/list_directory": {}
+  },
+  "allowedTools": [
+    "fs_read",
+    "fs_write", 
+    "execute_bash",
+    "thinking",
+    "todo_list",
+    "@git/git_status",
+    "@git/git_log", 
+    "@git/git_diff",
+    "@filesystem/read_file",
+    "@filesystem/list_directory"
+  ]
+}

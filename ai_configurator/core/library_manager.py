@@ -6,7 +6,7 @@ import os
 import shutil
 import json
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Any
 from .file_utils import ensure_directory, copy_file
 
 
@@ -51,7 +51,11 @@ class LibraryManager:
         for category_dir in self.library_dir.iterdir():
             if category_dir.is_dir() and not category_dir.name.startswith('.'):
                 files = []
+                # Include both .md and .json files
                 for file_path in category_dir.rglob("*.md"):
+                    relative_path = file_path.relative_to(self.library_dir)
+                    files.append(str(relative_path))
+                for file_path in category_dir.rglob("*.json"):
                     relative_path = file_path.relative_to(self.library_dir)
                     files.append(str(relative_path))
                 categories[category_dir.name] = sorted(files)
@@ -89,6 +93,22 @@ class LibraryManager:
             files.append(str(relative_path))
         
         return sorted(files)
+    
+    def get_role_mcp_config(self, role_name: str) -> Optional[Dict]:
+        """Get MCP configuration for a specific role."""
+        if not self.ensure_library_synced():
+            return None
+        
+        mcp_file = self.library_dir / "roles" / role_name / "mcp.json"
+        if not mcp_file.exists():
+            return None
+        
+        try:
+            with open(mcp_file, 'r', encoding='utf-8') as f:
+                return json.load(f)
+        except Exception as e:
+            print(f"Error loading MCP config for {role_name}: {e}")
+            return None
     
     def get_common_files(self) -> List[str]:
         """Get all common/organizational files."""
@@ -134,7 +154,32 @@ class LibraryManager:
             except Exception:
                 continue
         
-        return sorted(matches)
+    def get_role_info(self, role_name: str) -> Dict[str, Any]:
+        """Get comprehensive information about a role."""
+        if not self.ensure_library_synced():
+            return {}
+        
+        role_dir = self.library_dir / "roles" / role_name
+        if not role_dir.exists():
+            return {}
+        
+        files = self.get_role_files(role_name)
+        mcp_config = self.get_role_mcp_config(role_name)
+        
+        info = {
+            "name": role_name,
+            "files": files,
+            "file_count": len(files),
+            "has_mcp_config": mcp_config is not None
+        }
+        
+        if mcp_config:
+            info["mcp_servers"] = list(mcp_config.get("mcpServers", {}).keys())
+            info["mcp_server_count"] = len(mcp_config.get("mcpServers", {}))
+            info["tools_settings_count"] = len(mcp_config.get("toolsSettings", {}))
+            info["allowed_tools_count"] = len(mcp_config.get("allowedTools", []))
+        
+        return info
     
     def get_library_info(self) -> Dict:
         """Get library information and statistics."""

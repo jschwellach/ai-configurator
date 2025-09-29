@@ -238,12 +238,8 @@ def cmd_roles_list(args):
     if args.format == "json":
         role_data = []
         for role in roles:
-            files = library.get_role_files(role)
-            role_data.append({
-                "name": role,
-                "files": files,
-                "file_count": len(files)
-            })
+            role_info = library.get_role_info(role)
+            role_data.append(role_info)
         print(json.dumps(role_data, indent=2))
         return
     
@@ -255,12 +251,21 @@ def cmd_roles_list(args):
     print("=" * 30)
     
     for role in roles:
-        files = library.get_role_files(role)
+        role_info = library.get_role_info(role)
         print(f"\n👤 {role}")
-        print(f"   Files: {len(files)}")
-        for file_path in files:
+        print(f"   Files: {role_info['file_count']}")
+        
+        if role_info['has_mcp_config']:
+            print(f"   🔧 MCP: {role_info['mcp_server_count']} servers, {role_info['tools_settings_count']} tool settings")
+        else:
+            print(f"   🔧 MCP: No configuration")
+        
+        for file_path in role_info['files']:
             filename = file_path.split("/")[-1]
-            print(f"     📄 {filename}")
+            if filename.endswith('.json'):
+                print(f"     ⚙️  {filename}")
+            else:
+                print(f"     📄 {filename}")
     
     print(f"\nTotal: {len(roles)} roles")
 
