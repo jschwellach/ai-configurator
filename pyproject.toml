@@ -4,22 +4,21 @@ build-backend = "hatchling.build"
 
 [project]
 name = "ai-configurator"
-version = "0.1.0"
-description = "Cross-platform configuration manager for Amazon Q CLI"
+version = "4.0.0"
+description = "Enhanced tool-agnostic knowledge library manager for AI tools and systems"
 readme = "README.md"
-requires-python = ">=3.8"
+requires-python = ">=3.9"
 license = "MIT"
 authors = [
     { name = "AI Configurator Team" },
 ]
-keywords = ["amazon-q", "cli", "configuration", "ai", "mcp"]
+keywords = ["ai", "cli", "configuration", "mcp", "agents", "knowledge-management"]
 classifiers = [
-    "Development Status :: 3 - Alpha",
+    "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
     "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.8",
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
@@ -30,19 +29,22 @@ classifiers = [
 
 dependencies = [
     "click>=8.0.0",
-    "pydantic>=2.0.0",
     "rich>=13.0.0",
+    "pydantic>=2.0.0",
     "pyyaml>=6.0.0",
+    "jsonschema>=4.17.0",
+    "requests>=2.28.0",
     "packaging>=21.0.0",
     "platformdirs>=3.0.0",
-    "watchdog>=3.0.0",  # For file watching functionality
-    "jinja2>=3.0.0",    # For template rendering
+    "watchdog>=3.0.0",
+    "prompt-toolkit>=3.0.0",
 ]
 
 [project.optional-dependencies]
 dev = [
     "pytest>=7.0.0",
     "pytest-cov>=4.0.0",
+    "pytest-mock>=3.10.0",
     "black>=23.0.0",
     "isort>=5.0.0",
     "flake8>=6.0.0",
@@ -74,7 +76,7 @@ include = [
 
 [tool.black]
 line-length = 88
-target-version = ['py38']
+target-version = ['py39']
 include = '\.pyi?$'
 
 [tool.isort]
@@ -82,7 +84,7 @@ profile = "black"
 multi_line_output = 3
 
 [tool.mypy]
-python_version = "3.8"
+python_version = "3.9"
 warn_return_any = true
 warn_unused_configs = true
 disallow_untyped_defs = true
