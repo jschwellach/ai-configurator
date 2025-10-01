@@ -33,16 +33,15 @@ class AgentConfig:
     def merge_mcp_config(self, mcp_config: Dict[str, Any]):
         """Merge MCP configuration from role."""
         if "mcpServers" in mcp_config:
-            self.mcp_servers.update(mcp_config["mcpServers"])
+            # Replace existing MCP servers completely to ensure updates are applied
+            self.mcp_servers = mcp_config["mcpServers"].copy()
         
         if "toolsSettings" in mcp_config:
             self.tools_settings.update(mcp_config["toolsSettings"])
         
         if "allowedTools" in mcp_config:
-            # Merge allowed tools, avoiding duplicates
-            for tool in mcp_config["allowedTools"]:
-                if tool not in self.allowed_tools:
-                    self.allowed_tools.append(tool)
+            # Replace allowed tools completely to ensure updates are applied
+            self.allowed_tools = mcp_config["allowedTools"].copy()
     
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary for JSON serialization."""
@@ -118,6 +117,126 @@ class AgentManager:
             return False
     
     def update_agent(self, name: str) -> bool:
+        """Update an existing agent (interactive)."""
+        agent_file = self.agents_dir / f"{name}.json"
+        if not agent_file.exists():
+            print(f"Agent '{name}' not found")
+            return False
+        
+        try:
+            # Load existing config
+            with open(agent_file, 'r', encoding='utf-8') as f:
+                config = json.load(f)
+            
+            # Interactive menu
+            while True:
+                print(f"\n{name} Agent Configuration:")
+                print("1. Add/Remove Knowledge Files")
+                print("2. Configure MCP Servers")
+                print("3. Modify Agent Settings")
+                print("4. Save and Exit")
+                print("5. Cancel")
+                
+                choice = input("Select option (1-5): ").strip()
+                
+                if choice == "1":
+                    self._manage_knowledge_files(config)
+                elif choice == "2":
+                    self._manage_mcp_servers(config)
+                elif choice == "3":
+                    self._manage_agent_settings(config)
+                elif choice == "4":
+                    # Save updated config
+                    with open(agent_file, 'w', encoding='utf-8') as f:
+                        json.dump(config, f, indent=2)
+                    
+                    # Update Amazon Q CLI agent if tool is q-cli
+                    if self.tool == "q-cli":
+                        self._create_q_cli_agent(name, config)
+                    
+                    print(f"Agent '{name}' updated successfully")
+                    return True
+                elif choice == "5":
+                    print("Update cancelled")
+                    return False
+                else:
+                    print("Invalid option, please try again")
+        
+        except Exception as e:
+            print(f"Error updating agent: {e}")
+            return False
+
+    def update_all_agents(self) -> bool:
+        """Update all existing agents with latest library configurations."""
+        try:
+            agents = self.list_agents()
+            if not agents:
+                print("No agents found to update")
+                return True
+            
+            success_count = 0
+            for agent_name in agents:
+                print(f"Updating agent: {agent_name}")
+                if self._update_agent_config(agent_name):
+                    success_count += 1
+                    print(f"  ✅ {agent_name} updated")
+                else:
+                    print(f"  ❌ {agent_name} failed")
+            
+            print(f"Updated {success_count}/{len(agents)} agents")
+            return success_count == len(agents)
+        except Exception as e:
+            print(f"Error updating agents: {e}")
+            return False
+    
+    def _update_agent_config(self, name: str) -> bool:
+        """Update a single agent configuration without interactive prompts."""
+        agent_file = self.agents_dir / f"{name}.json"
+        if not agent_file.exists():
+            return False
+        
+        try:
+            # Load existing config
+            with open(agent_file, 'r', encoding='utf-8') as f:
+                config = json.load(f)
+            
+            # Recreate agent with current library configurations
+            resources = config.get("resources", [])
+            rules = []
+            
+            # Extract rule paths from resources
+            for resource in resources:
+                if resource.startswith("file://"):
+                    file_path = resource.replace("file://", "")
+                    # Convert absolute path back to relative library path
+                    if str(self.library_manager.library_dir) in file_path:
+                        relative_path = Path(file_path).relative_to(self.library_manager.library_dir)
+                        rules.append(str(relative_path))
+            
+            # Create new agent config
+            agent = AgentConfig(name, config.get("description", ""))
+            
+            # Add resources
+            for rule in rules:
+                file_path = self.library_manager.get_file_path(rule)
+                if file_path:
+                    agent.add_resource(str(file_path))
+            
+            # Load role-specific MCP configurations
+            self._add_role_mcp_configs(agent, rules)
+            
+            # Save updated config
+            with open(agent_file, 'w', encoding='utf-8') as f:
+                json.dump(agent.to_dict(), f, indent=2)
+            
+            # Update Amazon Q CLI agent if tool is q-cli
+            if self.tool == "q-cli":
+                self._create_q_cli_agent(name, agent.to_dict())
+            
+            return True
+        except Exception as e:
+            print(f"Error updating {name}: {e}")
+            return False
         """Update an existing agent (interactive)."""
         agent_file = self.agents_dir / f"{name}.json"
         if not agent_file.exists():

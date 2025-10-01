@@ -132,15 +132,40 @@ def cmd_create_agent(args):
         sys.exit(1)
 
 
+def cmd_update_all(args):
+    """Sync library and update all agents."""
+    # First sync the library
+    library = LibraryManager()
+    if not library.sync_library():
+        print("❌ Failed to sync library")
+        sys.exit(1)
+    print("✅ Library synced successfully")
+    
+    # Then update all agents
+    agent_manager = AgentManager(args.tool)
+    if agent_manager.update_all_agents():
+        print("✅ All agents updated successfully")
+    else:
+        print("❌ Failed to update some agents")
+        sys.exit(1)
+
+
 def cmd_update_agent(args):
-    """Update an existing agent."""
+    """Update an existing agent or all agents."""
     agent_manager = AgentManager(args.tool)
     
-    if agent_manager.update_agent(args.name):
-        print(f"✅ Agent '{args.name}' updated successfully")
+    if args.all:
+        if agent_manager.update_all_agents():
+            print("✅ All agents updated successfully")
+        else:
+            print("❌ Failed to update some agents")
+            sys.exit(1)
     else:
-        print(f"❌ Failed to update agent '{args.name}'")
-        sys.exit(1)
+        if agent_manager.update_agent(args.name):
+            print(f"✅ Agent '{args.name}' updated successfully")
+        else:
+            print(f"❌ Failed to update agent '{args.name}'")
+            sys.exit(1)
 
 
 def cmd_agents_list(args):
@@ -289,6 +314,8 @@ Examples:
   # Agent management
   ai-config agents list --tool q-cli
   ai-config update-agent --name my-dev --tool q-cli
+  ai-config update-agent --all --tool q-cli
+  ai-config update-all --tool q-cli
   ai-config agents remove --name my-dev --tool q-cli
         """
     )
@@ -323,10 +350,17 @@ Examples:
     
     # Agent management
     update_parser = subparsers.add_parser("update-agent", help="Update an existing agent")
-    update_parser.add_argument("--name", required=True, help="Agent name")
+    update_parser.add_argument("--name", help="Agent name (required unless --all is used)")
+    update_parser.add_argument("--all", action="store_true", help="Update all agents")
     update_parser.add_argument("--tool", default="q-cli", 
                               choices=["q-cli", "claude-code", "chatgpt"],
                               help="Target tool")
+    
+    # Update all (convenience command)
+    update_all_parser = subparsers.add_parser("update-all", help="Sync library and update all agents")
+    update_all_parser.add_argument("--tool", default="q-cli",
+                                  choices=["q-cli", "claude-code", "chatgpt"],
+                                  help="Target tool")
     
     # Agents commands
     agents_parser = subparsers.add_parser("agents", help="Agent management")
@@ -378,7 +412,12 @@ Examples:
         elif args.command == "create-agent":
             cmd_create_agent(args)
         elif args.command == "update-agent":
+            if not args.all and not args.name:
+                print("❌ Either --name or --all must be specified")
+                sys.exit(1)
             cmd_update_agent(args)
+        elif args.command == "update-all":
+            cmd_update_all(args)
         
         # Agents commands
         elif args.command == "agents":
