@@ -351,7 +351,7 @@ class QCLISyncService:
             resource_paths = self.resolve_resource_paths(qcli_data, copy_to_library_callback)
             
             # Check if agent already exists locally (conflict)
-            agent_file = self.local_dir / f"{agent_name}.json"
+            agent_file = self.local_dir / f"{agent_name}_q-cli.json"
             if agent_file.exists():
                 # Load existing local agent
                 local_data = json.loads(agent_file.read_text())
