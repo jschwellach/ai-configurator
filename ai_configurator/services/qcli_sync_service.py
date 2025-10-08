@@ -174,7 +174,16 @@ class QCLISyncService:
             if not path:
                 continue
             
-            resource_path = Path(path)
+            # Handle file:// URIs
+            if path.startswith("file://"):
+                path = path[7:]  # Remove file:// prefix
+            
+            resource_path = Path(path).expanduser()
+            
+            # Check if file exists
+            if not resource_path.exists():
+                # File doesn't exist, skip it
+                continue
             
             # Check if path is already in library
             if self._is_in_library(resource_path):

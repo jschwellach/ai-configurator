@@ -142,6 +142,7 @@ class QCLIImportScreen(BaseScreen):
         
         success_count = 0
         fail_count = 0
+        errors = []
         
         for agent_name in self.selected_agents:
             try:
@@ -152,18 +153,25 @@ class QCLIImportScreen(BaseScreen):
                 
                 if success:
                     success_count += 1
+                    logger.info(message)
                 else:
                     fail_count += 1
+                    errors.append(f"{agent_name}: {message}")
                     logger.error(message)
             except Exception as e:
                 fail_count += 1
-                logger.error(f"Failed to import {agent_name}: {e}")
+                error_msg = f"{agent_name}: {str(e)}"
+                errors.append(error_msg)
+                logger.error(f"Failed to import {agent_name}: {e}", exc_info=True)
         
         # Show result
         if fail_count == 0:
             self.notify(f"✓ Imported {success_count} agent(s)", severity="information")
         else:
-            self.notify(f"Imported {success_count}, failed {fail_count}", severity="warning")
+            error_summary = "\n".join(errors[:3])  # Show first 3 errors
+            if len(errors) > 3:
+                error_summary += f"\n... and {len(errors) - 3} more"
+            self.notify(f"Imported {success_count}, failed {fail_count}\n{error_summary}", severity="error", timeout=10)
         
         # Return to agent management
         self.app.pop_screen()
