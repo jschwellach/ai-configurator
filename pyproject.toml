@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "ai-agent-manager"
-version = "0.2.1"
+version = "0.2.2"
 description = "Terminal UI for managing AI agents, resources, and MCP servers across multiple AI tools"
 readme = "README.md"
 requires-python = ">=3.9"
@@ -60,10 +60,10 @@ dev = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/your-org/ai-configurator"
-Documentation = "https://ai-configurator.readthedocs.io"
-Repository = "https://github.com/your-org/ai-configurator.git"
-"Bug Tracker" = "https://github.com/your-org/ai-configurator/issues"
+Homepage = "https://github.com/jschwellach/ai-configurator"
+Documentation = "https://github.com/jschwellach/ai-configurator#readme"
+Repository = "https://github.com/jschwellach/ai-configurator.git"
+"Bug Tracker" = "https://github.com/jschwellach/ai-configurator/issues"
 
 [project.scripts]
 ai-agent-manager = "ai_configurator.main:main"
