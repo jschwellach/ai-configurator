@@ -29,7 +29,9 @@ classifiers = [
 
 dependencies = [
     "click>=8.0.0",
+    "click-default-group>=1.2.2",
     "rich>=13.0.0",
+    "textual>=0.40.0",
     "pydantic>=2.0.0",
     "pyyaml>=6.0.0",
     "jsonschema>=4.17.0",
@@ -38,6 +40,8 @@ dependencies = [
     "platformdirs>=3.0.0",
     "watchdog>=3.0.0",
     "prompt-toolkit>=3.0.0",
+    "gitpython>=3.1.0",
+    "jinja2>=3.0.0",
 ]
 
 [project.optional-dependencies]
@@ -45,11 +49,13 @@ dev = [
     "pytest>=7.0.0",
     "pytest-cov>=4.0.0",
     "pytest-mock>=3.10.0",
+    "pytest-asyncio>=0.21.0",
     "black>=23.0.0",
     "isort>=5.0.0",
     "flake8>=6.0.0",
     "mypy>=1.0.0",
     "pre-commit>=3.0.0",
+    "textual-dev>=1.0.0",
 ]
 
 [project.urls]
@@ -59,7 +65,7 @@ Repository = "https://github.com/your-org/ai-configurator.git"
 "Bug Tracker" = "https://github.com/your-org/ai-configurator/issues"
 
 [project.scripts]
-ai-config = "ai_configurator.cli:main"
+ai-config = "ai_configurator.main:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["ai_configurator"]
@@ -94,4 +100,3 @@ testpaths = ["tests"]
 python_files = ["test_*.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
-addopts = "--cov=ai_configurator --cov-report=term-missing"

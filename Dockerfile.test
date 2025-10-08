@@ -1,0 +1,26 @@
+FROM ubuntu:22.04
+
+# Install prerequisites
+RUN apt-get update && apt-get install -y \
+    python3 \
+    python3-pip \
+    git \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create non-root user
+RUN useradd -m -s /bin/bash testuser
+USER testuser
+WORKDIR /home/testuser
+
+# Copy source code
+COPY --chown=testuser:testuser . ./ai-configurator
+WORKDIR /home/testuser/ai-configurator
+
+# Install AI Configurator
+RUN pip install --user -e .
+
+# Add user bin to PATH
+ENV PATH="/home/testuser/.local/bin:$PATH"
+
+# Run tests
+CMD ["bash", "test_clean_install.sh"]

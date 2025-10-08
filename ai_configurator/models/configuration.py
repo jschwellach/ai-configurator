@@ -26,6 +26,15 @@ class SyncSettings(BaseModel):
     sync_timeout_seconds: int = Field(default=300, ge=1)
 
 
+class LibraryConfig(BaseModel):
+    """Library configuration settings."""
+    base_library_path: Path = Field(default_factory=lambda: Path.home() / ".config" / "ai-configurator" / "library")
+    personal_library_path: Path = Field(default_factory=lambda: Path.home() / ".config" / "ai-configurator" / "personal")
+    backup_path: Path = Field(default_factory=lambda: Path.home() / ".config" / "ai-configurator" / "backups")
+    remote_library_url: Optional[str] = Field(default=None, description="Remote Git repository URL")
+    remote_library_path: Optional[str] = Field(default=None, description="Local path for remote library")
+
+
 class UserPreferences(BaseModel):
     """User-specific preferences and settings."""
     default_editor: Optional[str] = Field(default=None, description="Preferred external editor")
@@ -49,6 +58,7 @@ class Configuration(BaseModel):
     """Core Configuration domain entity."""
     user_preferences: UserPreferences = Field(default_factory=UserPreferences)
     sync_settings: SyncSettings = Field(default_factory=SyncSettings)
+    library_config: LibraryConfig = Field(default_factory=LibraryConfig)
     backup_policy: BackupPolicy = Field(default_factory=BackupPolicy)
     tool_settings: Dict[ToolType, Dict[str, Any]] = Field(default_factory=dict)
     backups: List[BackupInfo] = Field(default_factory=list)

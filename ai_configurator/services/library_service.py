@@ -20,15 +20,119 @@ class LibraryService:
     def __init__(self, base_path: Path, personal_path: Path):
         self.base_path = base_path
         self.personal_path = personal_path
+        self.base_path.mkdir(parents=True, exist_ok=True)
         self.personal_path.mkdir(parents=True, exist_ok=True)
+        self._ensure_templates()
+    
+    def _ensure_templates(self) -> None:
+        """Ensure templates directory exists with default templates."""
+        templates_dir = self.base_path / "templates"
+        
+        if templates_dir.exists():
+            return  # Templates already exist
+        
+        # Create templates directory
+        templates_dir.mkdir(parents=True, exist_ok=True)
+        
+        # Copy templates from source if available
+        import ai_configurator
+        source_templates = Path(ai_configurator.__file__).parent.parent / "library" / "templates"
+        
+        if source_templates.exists():
+            import shutil
+            for template_file in source_templates.glob("*.md"):
+                shutil.copy2(template_file, templates_dir)
+        else:
+            # Create basic templates
+            self._create_default_templates(templates_dir)
+    
+    def _create_default_templates(self, templates_dir: Path) -> None:
+        """Create default templates."""
+        templates = {
+            "system-administrator-q-cli.md": """# System Administrator
+
+System administration focused AI assistant for infrastructure management and operations.
+
+## Responsibilities
+- Server management and monitoring
+- System security and compliance  
+- Infrastructure automation
+- Performance optimization
+
+## Skills
+- Linux/Unix administration
+- Network configuration
+- Security best practices
+- Automation scripting
+""",
+            "software-engineer-q-cli.md": """# Software Engineer
+
+Software development focused AI assistant for coding and engineering tasks.
+
+## Responsibilities
+- Software design and development
+- Code review and quality
+- Testing and debugging
+- Technical documentation
+
+## Skills
+- Programming languages
+- Software architecture
+- Version control
+- Testing methodologies
+""",
+            "daily-assistant-q-cli.md": """# Daily Assistant
+
+General productivity AI assistant for daily tasks and support.
+
+## Responsibilities
+- Task planning and organization
+- Information research
+- Communication assistance
+- Problem-solving support
+
+## Skills
+- Task management
+- Research and analysis
+- Clear communication
+- Process improvement
+"""
+        }
+        
+        for filename, content in templates.items():
+            (templates_dir / filename).write_text(content)
     
     def create_library(self) -> Library:
-        """Create a new library instance."""
+        """Create a new library instance with indexed files."""
+        # Index base library files
+        base_files = self._index_files(self.base_path, LibrarySource.BASE)
+        
+        # Index personal library files
+        personal_files = self._index_files(self.personal_path, LibrarySource.PERSONAL)
+        
+        # Combine all files
+        all_files = {}
+        all_files.update(base_files)
+        all_files.update(personal_files)
+        
+        # Detect conflicts
+        conflicts = self._detect_conflicts(base_files, personal_files)
+        
+        # Create metadata
+        metadata = LibraryMetadata(
+            version="4.0.0",
+            last_sync=datetime.now(),
+            base_hash=self._calculate_library_hash(base_files),
+            personal_hash=self._calculate_library_hash(personal_files),
+            conflicts=conflicts,
+            sync_status=SyncStatus.CONFLICTS if conflicts else SyncStatus.SYNCED
+        )
+        
         return Library(
             base_path=self.base_path,
             personal_path=self.personal_path,
-            metadata=LibraryMetadata(version="4.0.0"),
-            files={}
+            metadata=metadata,
+            files=all_files
         )
     
     def sync_library(self, library: Library) -> List[ConflictInfo]:
@@ -130,19 +234,22 @@ class LibraryService:
         for file_path in root_path.rglob("*.md"):
             if file_path.is_file():
                 relative_path = file_path.relative_to(root_path)
-                library_file = self._create_library_file(file_path, source)
+                library_file = self._create_library_file(file_path, source, relative_path)
                 key = f"{source.value}/{relative_path}"
                 files[key] = library_file
         
         return files
     
-    def _create_library_file(self, file_path: Path, source: LibrarySource) -> LibraryFile:
+    def _create_library_file(self, file_path: Path, source: LibrarySource, relative_path: Path = None) -> LibraryFile:
         """Create LibraryFile from filesystem path."""
         content = file_path.read_text(encoding='utf-8')
         content_hash = hashlib.sha256(content.encode()).hexdigest()
         
+        # Use relative_path if provided, otherwise just the filename
+        path_str = str(relative_path) if relative_path else str(file_path.name)
+        
         return LibraryFile(
-            path=str(file_path.name),
+            path=path_str,
             source=source,
             content_hash=content_hash,
             last_modified=datetime.fromtimestamp(file_path.stat().st_mtime),

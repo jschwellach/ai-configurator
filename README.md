@@ -1,39 +1,193 @@
-# AI Configurator
+# AI Configurator v4.0
 
-**Tool-agnostic knowledge library manager for AI tools and systems.**
+**Visual knowledge library and agent manager for Amazon Q CLI with TUI interface.**
 
-## 🎯 Purpose
+## 🎯 What It Does
 
-AI Configurator provides a pure knowledge library that can be consumed by any AI tool (Amazon Q CLI, Claude Projects, ChatGPT, etc.) while maintaining tool-specific agent configurations separately. Whether you're setting up agents for development teams, standardizing knowledge across tools, or sharing expertise across organizations, AI Configurator makes it seamless.
+AI Configurator helps you manage Amazon Q CLI agents with a visual interface:
+- 📚 **Library Management**: Organize knowledge files (templates, rules, docs)
+- 🤖 **Agent Configuration**: Create and edit Q CLI agents visually
+- 🔌 **MCP Server Management**: Add and configure Model Context Protocol servers
+- 🎨 **Dual-Pane Editor**: Select resources and MCP servers with checkboxes
+- 🔄 **Auto-Sync**: Agents automatically export to `~/.aws/amazonq/agents/`
 
-## ✨ Features
+## ✨ Key Features
 
-- **Tool-Agnostic Library**: Pure markdown knowledge that works with any AI tool
-- **Role-Based Organization**: Knowledge organized around roles with extensible folders
-- **Multi-Tool Agent Support**: Create agents for Amazon Q CLI, Claude Projects, ChatGPT (planned)
-- **Interactive Management**: CLI app for agent configuration with menu system
-- **File References**: Agents reference library files without content duplication
-- **MCP Integration**: Preserved MCP server configurations with per-agent management
-- **Cross-Platform**: Works on Windows, macOS, and Linux
-- **Knowledge Discovery**: Search and browse library content interactively
+### 🖥️ **TUI (Terminal User Interface)**
+- **Dual-Pane Editor**: Resources on left, agent config on right
+- **Multi-Select**: Use Space to select multiple files/servers
+- **Keyboard Navigation**: Arrow keys + shortcuts (no mouse needed)
+- **Live Preview**: See current agent configuration while editing
+- **Auto-Export**: Changes sync to Q CLI automatically
+
+### 📚 **Library System**
+- **Base Library**: Shared templates and rules
+- **Personal Library**: Your custom files
+- **Clone & Edit**: Copy base files to personal for customization
+- **Visual Separation**: Clear distinction between base and personal files
+
+### 🔌 **MCP Server Management**
+- **Paste Configs**: Copy JSON from internet, paste directly
+- **Flexible Parsing**: Handles multiple JSON formats
+- **Edit Configs**: Modify server settings in your editor
+- **Registry**: Browse and add servers from MCP registry
 
 ## 📦 Installation
 
-### Quick Install
-
 ```bash
-# Using pip
+# Install from PyPI
 pip install ai-configurator
 
-# Verify installation
+# Or install from source
+git clone https://github.com/yourusername/ai-configurator.git
+cd ai-configurator
+pip install -e .
+```
+
+## 🚀 Quick Start
+
+### Launch TUI
+```bash
+# Start the visual interface
+ai-config
+
+# Navigate with:
+#   1 - Agent Management
+#   2 - Library Management
+#   3 - MCP Servers
+#   4 - Settings
+#   ? - Help
+#   q - Quit
+```
+
+### Using CLI (For Automation)
+```bash
+# Create an agent
+ai-config agent create my-agent --tool q-cli
+
+# List agents
+ai-config agent list
+
+# Sync library
+ai-config library sync
+
+# Browse MCP servers
+ai-config mcp browse
+
+# Get help
 ai-config --help
 ```
 
-### Development Setup
+## 📚 Features
 
+### 🏗️ **Core Features**
+- **Tool-Agnostic Library**: Pure markdown knowledge that works with any AI tool
+- **Role-Based Organization**: Knowledge organized around roles
+- **Multi-Tool Agent Support**: Amazon Q CLI, Claude Projects, ChatGPT (planned)
+- **File References**: Agents reference library files without duplication
+- **MCP Integration**: Full MCP server management
+- **Cross-Platform**: Windows, macOS, and Linux
+
+### 🔄 **Library Management**
+- **Synchronization**: Conflict-aware sync between base and personal libraries
+- **Local Files**: Include project files using glob patterns
+- **Git Integration**: Clone, sync, and collaborate via Git
+- **Performance**: Intelligent caching with 3.3x speedup
+
+### 🖥️ **User Experience**
+- **TUI Mode**: Visual, menu-driven interface
+- **CLI Mode**: Simplified, consistent commands
+- **Interactive Wizards**: Step-by-step setup
+- **Template System**: Pre-built agent templates
+
+## 📖 Documentation
+
+- [TUI User Guide](docs/TUI_GUIDE.md) - Complete TUI usage guide
+- [Migration Guide](docs/MIGRATION_GUIDE_V4.md) - Upgrading from v3.x
+- [Keyboard Shortcuts](docs/KEYBOARD_SHORTCUTS.md) - Quick reference
+- [User Guide](docs/USER_GUIDE.md) - Comprehensive documentation
+- [Troubleshooting](docs/TROUBLESHOOTING.md) - Common issues
+
+## 🎮 Usage Examples
+
+### Agent Management
 ```bash
-# Clone and setup for development
-git clone <repository-url>
+# CLI
+ai-config agent create my-agent
+ai-config agent list
+ai-config agent export my-agent
+
+# TUI
+ai-config  # Navigate to Agent Management
+```
+
+### Library Management
+```bash
+# CLI
+ai-config library status
+ai-config library sync
+ai-config library files "**/*.md"
+
+# TUI
+ai-config  # Navigate to Library Management
+```
+
+### MCP Server Management
+```bash
+# CLI
+ai-config mcp browse
+ai-config mcp install filesystem
+ai-config mcp list
+
+# TUI
+ai-config  # Navigate to MCP Servers
+```
+
+## 🔑 Key Commands
+
+| Command | Description |
+|---------|-------------|
+| `ai-config` | Launch TUI |
+| `ai-config agent list` | List all agents |
+| `ai-config agent create <name>` | Create new agent |
+| `ai-config library sync` | Sync library |
+| `ai-config mcp browse` | Browse MCP servers |
+| `ai-config status` | Show system status |
+| `ai-config --help` | Show help |
+
+## 🎯 Quick Start
+
+### Using TUI (Recommended for New Users)
+```bash
+# Launch TUI
+ai-config
+
+# Navigate with:
+#   1 - Agent Management
+#   2 - Library Management
+#   3 - MCP Servers
+#   4 - Settings
+#   ? - Help
+#   q - Quit
+```
+
+### Using CLI (For Automation)
+```bash
+# Create an agent
+ai-config agent create my-agent --tool q-cli
+
+# List agents
+ai-config agent list
+
+# Sync library
+ai-config library sync
+
+# Browse MCP servers
+ai-config mcp browse
+
+# Get help
+ai-config --help
+```
 cd ai-configurator
 pip install -r requirements-dev.txt
 pip install -e .
@@ -41,308 +195,410 @@ pip install -e .
 
 ## 🚀 Quick Start
 
+### New User Setup
 ```bash
-# Sync knowledge library
+# Complete interactive setup for new users
+ai-config wizard quick-start
+
+# Or step by step:
+ai-config status                    # Check system status
+ai-config library sync              # Sync knowledge library
+ai-config wizard create-agent       # Create your first agent
+```
+
+### Existing Users
+```bash
+# Check system status
+ai-config status
+
+# Sync library with conflict resolution
 ai-config library sync
 
-# List available knowledge
-ai-config library list
+# Browse available MCP servers
+ai-config mcp browse
 
-# Discover roles
-ai-config roles list
-
-# Create an agent
-ai-config create-agent --name my-dev --role software-engineer --include-common --tool q-cli
-
-# Use the agent (Amazon Q CLI)
-q chat --agent my-dev
-
-# Manage agents
-ai-config agents list --tool q-cli
-ai-config update-agent --name my-dev --tool q-cli  # Interactive menu
+# Create agent from template
+ai-config wizard create-agent
 ```
 
-## 📋 Commands
+## 📚 Command Reference
 
-### Library Management
+### 🚀 Production Management (Phase 3)
 ```bash
-ai-config library list                    # List all knowledge files
-ai-config library sync                    # Sync library from source
-ai-config library info                    # Show library information
-ai-config library search "aws security"   # Search library content
+# Git-based library management
+ai-config git clone <repo-url>       # Clone remote library
+ai-config git pull                   # Pull updates
+ai-config git push                   # Push changes
+ai-config git status                 # Show Git status
+ai-config git sync                   # Sync with remote
+
+# Enhanced synchronization
+ai-config sync all                   # Sync all libraries
+ai-config sync source remote         # Sync specific source
+ai-config sync status                # Show sync status
+
+# Performance and caching
+ai-config cache stats                # Show cache statistics
+ai-config cache benchmark            # Run performance test
+ai-config cache preload              # Preload cache
+ai-config cache clear                # Clear cache
+
+# Production configuration
+ai-config production show            # Show config
+ai-config production environments    # List environments
+ai-config production validate --env production
+ai-config production generate --env production
+
+# Monitoring and logging
+ai-config monitoring health          # System health check
+ai-config monitoring logs            # View logs
+ai-config monitoring stats           # Log statistics
+ai-config monitoring setup           # Setup logging
 ```
 
-### Agent Creation & Management
+### 🔄 Library Management
 ```bash
-# Create agents
-ai-config create-agent --name NAME --role ROLE --tool TOOL
-ai-config create-agent --name architect --rules "roles/software-architect/,domains/aws-best-practices.md" --tool q-cli
+# Library synchronization
+ai-config library status            # Show sync status
+ai-config library sync              # Sync with conflict resolution
+ai-config library diff              # Show differences
+ai-config library update            # Update from base library
 
-# Manage agents
-ai-config agents list --tool TOOL         # List all agents
-ai-config update-agent --name NAME --tool TOOL  # Interactive update menu
-ai-config agents remove --name NAME --tool TOOL # Remove agent
-ai-config agents info --name NAME --tool TOOL   # Show agent details
+# View library content
+ai-config status                    # System overview
 ```
 
-### Role Discovery
+### 📁 File Management
 ```bash
-ai-config roles list                      # List available roles
+# Discover and add local files
+ai-config files scan-files <agent> --pattern "**/*.md"
+ai-config files add-files <agent> --pattern "./docs/**/*.md"
+ai-config files watch-files <agent> --enable
+
+# Examples
+ai-config files scan-files my-agent --pattern "**/*.py" --base-path .
+ai-config files add-files dev-agent --pattern "./rules/**/*.md"
 ```
 
-All commands support `--format json` for programmatic use.
+### 🔧 MCP Server Management
+```bash
+# Browse and discover servers
+ai-config mcp browse                # Browse available servers
+ai-config mcp search git            # Search for specific servers
+ai-config mcp status                # Show registry status
+
+# Install and manage servers
+ai-config mcp install filesystem    # Install a server
+ai-config mcp create-sample         # Create sample registry
+```
+
+### 🧙 Interactive Wizards
+```bash
+# Setup wizards
+ai-config wizard quick-start        # Complete new user setup
+ai-config wizard create-agent       # Interactive agent creation
+ai-config wizard setup-mcp <agent>  # MCP server setup
+
+# Agent management
+ai-config create-agent              # Create new agent
+ai-config manage-agent <name>       # Interactive management
+ai-config export-agent <name> --save  # Export to Q CLI
+```
 
 ## 🏗️ Architecture
 
-### Tool-Agnostic Knowledge Library
-```
-library/
-├── README.md              # Library documentation
-├── common/                # Organizational knowledge (5 files)
-│   ├── policies.md
-│   ├── aws-security-best-practices.md
-│   └── ...
-├── roles/                 # Role-specific knowledge (3 roles)
-│   ├── product-owner/
-│   │   └── product-owner.md
-│   ├── software-architect/
-│   │   └── software-architect.md
-│   └── software-engineer/
-│       └── software-engineer.md
-├── domains/               # Domain expertise (2 files)
-│   ├── aws-best-practices.md
-│   └── security.md
-├── tools/                 # Tool-specific knowledge (1 file)
-│   └── git.md
-└── workflows/             # Process documentation (1 file)
-    └── code-review.md
-```
-
-### User Configuration
+### Library Structure
 ```
 ~/.config/ai-configurator/
-├── library/               # Synced knowledge library
-├── q-cli/                 # Amazon Q CLI agents
-│   ├── agents/
-│   │   └── my-dev.json        # Agent with file references + MCP
-│   └── mcp-servers/
-├── claude-code/           # Future: Claude Projects
-└── chatgpt/               # Future: ChatGPT configurations
+├── library/                 # Base knowledge library
+│   ├── roles/              # Role-specific knowledge
+│   ├── domains/            # Domain expertise
+│   ├── workflows/          # Process documentation
+│   ├── tools/              # Tool-specific guides
+│   ├── templates/          # Agent templates (NEW!)
+│   └── common/             # Shared knowledge
+├── personal/               # Personal customizations (NEW!)
+├── agents/                 # Agent configurations
+├── registry/               # MCP server registry (NEW!)
+└── backups/                # Automatic backups (NEW!)
 ```
 
-### How It Works
+### Agent Templates
+Pre-built templates for common roles:
+- **Software Engineer**: Development-focused with Git, filesystem tools
+- **Software Architect**: Architecture and design patterns
+- **System Administrator**: Infrastructure and operations
+- **Daily Assistant**: General productivity and task management
+- **Product Owner**: Product management and planning
 
-1. **Knowledge Library**: Pure markdown files organized by category
-2. **Agent Creation**: Combines knowledge files with tool-specific configuration
-3. **File References**: Agents reference library files using `file://` paths
-4. **Multi-Tool Support**: Same knowledge, different export formats
-5. **Interactive Management**: Menu-driven agent configuration
+## 🔧 Advanced Usage
 
-## 🤖 Available Knowledge
-
-### Current Library (12 files, 5 categories)
-
-#### Roles (3 available)
-- **product-owner**: Product management, stakeholder communication, roadmap planning
-- **software-architect**: System design, technical leadership, architecture patterns
-- **software-engineer**: Development practices, code quality, collaboration
-
-#### Common (Organizational Knowledge)
-- Comprehensive organizational policies and standards
-- AWS security guidelines and best practices
-- Company-wide policies and procedures
-- Standard terminology and abbreviations
-
-#### Domains (Expertise Areas)
-- **AWS**: Well-Architected Framework, service best practices, cost optimization
-- **Security**: Application security, infrastructure security, compliance
-
-#### Tools (Tool-Specific Knowledge)
-- **Git**: Workflows, branching strategies, collaboration best practices
-
-#### Workflows (Process Documentation)
-- **Code Review**: Complete workflow, guidelines, and best practices
-
-### MCP Server Integration
-- **4 MCP servers** preserved from previous system
-- **Automatic integration** into new agents
-- **Per-agent configuration** through interactive menu
-- **Servers**: fetch, awslabs.core-mcp-server, aws-documentation-mcp-server, cdk-mcp-server
-
-## 🛠️ Multi-Tool Support
-
-### Currently Supported
-- **Amazon Q CLI (q-cli)**: Full support with agent creation and MCP integration
-
-### Planned Support
-- **Claude Projects (claude-code)**: Export knowledge for Claude Projects
-- **ChatGPT (chatgpt)**: Export as custom instructions
-
-### Creating Agents for Different Tools
+### Library Synchronization
 ```bash
-# Amazon Q CLI (current)
-ai-config create-agent --name my-dev --role software-engineer --tool q-cli
-q chat --agent my-dev
+# Check for conflicts before syncing
+ai-config library sync --dry-run
 
-# Claude Projects (planned)
-ai-config create-agent --name my-dev --role software-engineer --tool claude-code
-
-# ChatGPT (planned)
-ai-config create-agent --name my-dev --role software-engineer --tool chatgpt
-```
-
-## 📚 Usage Examples
-
-### Create a Product Owner Agent
-```bash
-# Create with role and common knowledge
-ai-config create-agent --name product-owner --role product-owner --include-common --tool q-cli
-
-# Use with Amazon Q CLI
-q chat --agent product-owner
-```
-
-### Create a Custom Developer Agent
-```bash
-# Create with specific knowledge files
-ai-config create-agent \
-  --name full-stack-dev \
-  --rules "roles/software-engineer/,domains/aws-best-practices.md,tools/git.md,workflows/code-review.md" \
-  --tool q-cli \
-  --description "Full-stack developer with AWS and Git expertise"
-
-# Update interactively
-ai-config update-agent --name full-stack-dev --tool q-cli
-```
-
-### Interactive Agent Management
-```bash
-ai-config update-agent --name my-agent --tool q-cli
-
-# Opens interactive menu:
-# 1. Add/Remove Knowledge Files
-# 2. Configure MCP Servers
-# 3. Modify Agent Settings
-# 4. Save and Exit
-```
-
-### Knowledge Discovery
-```bash
-# Browse all knowledge
-ai-config library list
-
-# Search for specific topics
-ai-config library search "security"
-ai-config library search "aws lambda"
-
-# Explore roles
-ai-config roles list
-```
-
-## 🔧 Development
-
-### Quick Development Setup
-```bash
-git clone <repository-url>
-cd ai-configurator
-pip install -r requirements-dev.txt
-pip install -e .
-
-# Test the system
+# Interactive conflict resolution
 ai-config library sync
-ai-config create-agent --name test --role software-engineer --tool q-cli
-ai-config agents list --tool q-cli
+
+# Show detailed differences
+ai-config library diff --file specific-file.md
 ```
 
-### Adding New Knowledge
-1. **Add markdown files** to appropriate library categories
-2. **Sync library**: `ai-config library sync`
-3. **Create agents** using new knowledge
-4. **Test with AI tools**
+### Local File Integration
+```bash
+# Add project-specific files to agents
+ai-config files add-files my-agent --pattern "./docs/**/*.md"
+ai-config files add-files my-agent --pattern "./rules/*.txt"
+
+# Enable file watching for auto-updates
+ai-config files watch-files my-agent --enable
+
+# Scan for files without adding
+ai-config files scan-files my-agent --pattern "**/*.py" --base-path ./src
+```
+
+### MCP Server Management
+```bash
+# Create sample registry for testing
+ai-config mcp create-sample
+
+# Browse servers by category
+ai-config mcp browse --category development
+
+# Search for specific functionality
+ai-config mcp search database
+ai-config mcp search "file system"
+
+# Install servers for enhanced capabilities
+ai-config mcp install git
+ai-config mcp install filesystem
+```
+
+### Template Usage
+Templates are stored in `library/templates/` and can be:
+- Used during agent creation via wizards
+- Customized in your personal library
+- Shared through library synchronization
+- Created by copying existing role files
+
+## 🛠️ Development
+
+### Running Tests
+```bash
+# Run all tests
+pytest
+
+# Run Phase 2 specific tests
+pytest tests/test_phase2_*.py -v
+
+# Run with coverage
+pytest --cov=ai_configurator
+```
 
 ### Project Structure
 ```
-ai-configurator/
-├── ai_configurator/           # Main package (6 files)
-│   ├── core/                  # Core functionality
-│   │   ├── library_manager.py     # Library management
-│   │   ├── agent_manager.py       # Agent creation
-│   │   └── file_utils.py          # File operations
-│   └── cli.py                 # CLI interface
-├── library/                   # Knowledge library
-├── backup/                    # Preserved configurations
-├── scripts/                   # Utility scripts
-└── docs/                      # Documentation
+ai_configurator/
+├── models/                 # Pydantic data models
+│   ├── sync_models.py     # Library sync models (NEW!)
+│   ├── file_models.py     # File management models (NEW!)
+│   ├── registry_models.py # MCP registry models (NEW!)
+│   └── wizard_models.py   # Wizard models (NEW!)
+├── services/              # Business logic services
+│   ├── sync_service.py    # Library synchronization (NEW!)
+│   ├── file_service.py    # File management (NEW!)
+│   ├── registry_service.py # MCP registry (NEW!)
+│   └── wizard_service.py  # Interactive wizards (NEW!)
+├── cli/                   # CLI command modules (NEW!)
+│   ├── sync_commands.py   # Library sync commands
+│   ├── file_commands.py   # File management commands
+│   ├── registry_commands.py # MCP registry commands
+│   └── wizard_commands.py # Wizard commands
+└── cli_enhanced.py        # Main CLI interface
 ```
 
-## 🔄 Migration from Previous Versions
+## 🔄 Migration from Phase 1
 
-### From v2.0 (Agent-Based)
-The system has been completely redesigned for tool-agnostic use. Previous Amazon Q CLI agents will need to be recreated:
+Phase 2 maintains full backward compatibility with Phase 1 configurations. Your existing agents and MCP servers will continue to work without changes.
 
-```bash
-# Clean up old configuration (optional)
-python scripts/cleanup_old_amazonq.py
-
-# Recreate agents with new system
-ai-config create-agent --name my-agent --role software-engineer --tool q-cli
-```
-
-### Key Changes
-- **Library**: Pure markdown files instead of YAML profiles
-- **Agents**: File references instead of content copying
-- **Multi-Tool**: Support for multiple AI tools, not just Amazon Q CLI
-- **Interactive**: Menu-driven agent management
-
-## 📖 Documentation
-
-### Complete Documentation
-- **Library Plan**: `docs/library_plan.md` - Complete redesign documentation
-- **Current State**: `docs/current_state.md` - System overview and architecture
-- **Development**: `CONTRIBUTING.md` - Development guidelines
-
-### Getting Help
-```bash
-# Library discovery
-ai-config library list
-ai-config roles list
-
-# Agent management
-ai-config agents list --tool q-cli
-ai-config update-agent --name <agent> --tool q-cli
-
-# Search functionality
-ai-config library search "topic"
-```
+New features are additive and optional:
+- Library sync is available but not required
+- Local file integration is opt-in per agent
+- MCP registry enhances but doesn't replace existing MCP management
+- Wizards provide alternative setup methods alongside existing commands
 
 ## 🤝 Contributing
 
-We welcome contributions! The tool-agnostic architecture makes it easy to:
-- **Add knowledge**: Create markdown files in library categories
-- **Add tools**: Implement new tool exporters
-- **Improve CLI**: Enhance the interactive experience
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Make your changes
+4. Add tests for new functionality
+5. Ensure all tests pass (`pytest`)
+6. Commit your changes (`git commit -m 'Add amazing feature'`)
+7. Push to the branch (`git push origin feature/amazing-feature`)
+8. Open a Pull Request
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## 🆘 Support
+
+- **Documentation**: Check this README and inline help (`ai-config --help`)
+- **Issues**: Report bugs and request features via GitHub Issues
+- **Discussions**: Join community discussions for questions and ideas
+
+## 🎉 What's New
+
+### 🚀 **Phase 3: Production Ready** (Latest)
+- Git-based library management with remote repositories
+- Performance optimization with intelligent caching (3.3x speedup)
+- Production configuration management with environment support
+- Comprehensive logging and error handling
+- Health monitoring and system diagnostics
+
+### ✅ **Phase 2: Advanced Library Management**
+- Conflict-aware library sync with interactive resolution
+- Local file integration with glob patterns and file watching
+- MCP server registry with discovery and installation
+- Interactive wizards and pre-built templates
+
+### 🏗️ **Phase 1: Foundation**
+- Tool-agnostic knowledge library system
+- Multi-tool agent support (Q CLI, Claude, ChatGPT)
+- Role-based organization and MCP integration
+
+---
+
+**AI Configurator v4.0.0** - Production-ready tool-agnostic knowledge library manager
+
+
+# Navigate with arrow keys, Enter to select, Esc to go back
+```
+
+### Create Your First Agent
+
+1. **Launch TUI**: `ai-config`
+2. **Select "Agent Management"**
+3. **Press `n` to create new agent**
+4. **Press `e` to edit the agent**
+5. **Select resources** with Space key
+6. **Select MCP servers** with Space key  
+7. **Press Ctrl+S to save**
+8. **Agent auto-exports to Q CLI!**
+
+## 📖 Usage Guide
+
+### Agent Management
+
+**Keyboard Shortcuts:**
+- `n` - Create new agent
+- `e` - Edit selected agent
+- `m` - Rename agent
+- `d` - Delete agent
+- `x` - Export to Q CLI
+- `r` - Refresh list
+
+**Agent Editor:**
+- `Space` - Toggle selection (checkbox)
+- `Tab` - Switch between tables
+- `↑/↓` - Navigate items
+- `Ctrl+S` - Save changes
+- `Esc` - Cancel
+
+### Library Management
+
+**Keyboard Shortcuts:**
+- `n` - Create new file
+- `e` - Edit file (personal files only)
+- `c` - Clone file (base → personal)
+- `r` - Refresh list
+
+### MCP Server Management
+
+**Keyboard Shortcuts:**
+- `a` - Add new server
+- `e` - Edit server config
+- `d` - Delete server
+- `s` - Sync registry
+- `r` - Refresh list
+
+**Supported JSON Formats:**
+```json
+// Format 1: mcpServers wrapper
+{
+  "mcpServers": {
+    "server-name": {
+      "command": "npx",
+      "args": ["@package/server"]
+    }
+  }
+}
+
+// Format 2: Direct entry (auto-wrapped)
+"server-name": {
+  "command": "npx",
+  "args": ["@package/server"]
+}
+```
+
+## 🗂️ Directory Structure
+
+```
+~/.config/ai-configurator/
+├── agents/                    # Agent configurations
+├── library/
+│   ├── base/                  # Shared templates
+│   └── personal/              # Your custom files
+├── registry/
+│   └── servers/               # MCP server configs
+└── logs/
+    └── tui.log               # Application logs
+
+~/.aws/amazonq/cli-agents/     # Q CLI agents (auto-synced)
+```
+
+## 🔧 CLI Commands
+
+```bash
+# Agent commands
+ai-config agent list
+ai-config agent create my-agent
+ai-config agent export my-agent
+
+# Library commands
+ai-config library list
+
+# MCP commands
+ai-config mcp list
+
+# System commands
+ai-config status
+```
+
+## 🐛 Troubleshooting
+
+### Agent not appearing in Q CLI
+```bash
+# Check if exported
+ls ~/.aws/amazonq/cli-agents/
+
+# Manual export
+ai-config agent export my-agent
+```
+
+### Editor not opening
+```bash
+# Set your preferred editor
+export EDITOR=vim  # or kate, nano, etc.
+```
+
+## 📚 Documentation
+
+- [TUI Guide](docs/TUI_GUIDE.md)
+- [Agent Editor Guide](docs/AGENT_EDITOR_GUIDE.md)
+- [Keyboard Shortcuts](docs/KEYBOARD_SHORTCUTS.md)
 
 ## 📄 License
 
 MIT License - see [LICENSE](LICENSE) for details.
-
-## 🆘 Support
-
-- **GitHub Issues**: Report bugs and request features
-- **Library Search**: `ai-config library search "topic"`
-- **Interactive Help**: `ai-config update-agent --name <agent> --tool q-cli`
-
----
-
-**Status**: ✅ **Production Ready** - Tool-agnostic library architecture fully implemented
-
-**Current Version**: v3.0 - Multi-tool knowledge library manager
-
-**Capabilities**: 
-- 📚 12 knowledge files across 5 categories
-- 👥 3 role-based configurations  
-- 🤖 Multi-tool agent creation (Amazon Q CLI active)
-- 🔧 4 MCP servers integrated
-- 🎛️ Interactive agent management

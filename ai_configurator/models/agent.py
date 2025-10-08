@@ -23,6 +23,7 @@ class AgentConfig(BaseModel):
     """Agent configuration data."""
     name: str = Field(..., description="Unique agent identifier")
     description: str = Field(default="", description="Human-readable description")
+    prompt: Optional[str] = Field(default=None, description="Custom instructions/rules (system prompt)")
     tool_type: ToolType = Field(..., description="Target AI tool")
     resources: List[ResourcePath] = Field(default_factory=list)
     mcp_servers: Dict[str, MCPServerConfig] = Field(default_factory=dict)
@@ -84,6 +85,7 @@ class Agent(BaseModel):
             "$schema": "https://raw.githubusercontent.com/aws/amazon-q-developer-cli/refs/heads/main/schemas/agent-v1.json",
             "name": self.config.name,
             "description": self.config.description or None,
+            "prompt": self.config.prompt,
             "resources": [r.to_file_uri() for r in self.config.resources],
             "tools": self.config.settings.tools,
             "allowedTools": self.config.settings.allowed_tools,

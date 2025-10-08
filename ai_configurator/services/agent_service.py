@@ -101,6 +101,25 @@ class AgentService:
         else:
             return agent.config.dict()
     
+    def export_to_q_cli(self, agent: Agent) -> bool:
+        """Export agent to Q CLI agents directory."""
+        if agent.tool_type != ToolType.Q_CLI:
+            return False
+        
+        try:
+            # Q CLI agents directory
+            q_cli_dir = Path.home() / ".aws" / "amazonq" / "cli-agents"
+            q_cli_dir.mkdir(parents=True, exist_ok=True)
+            
+            # Export agent config
+            config = agent.to_q_cli_format()
+            agent_file = q_cli_dir / f"{agent.name}.json"
+            
+            agent_file.write_text(json.dumps(config, indent=2, default=str))
+            return True
+        except Exception:
+            return False
+    
     def _save_agent(self, agent: Agent) -> bool:
         """Save agent to file."""
         agent_file = self._get_agent_file(agent.name, agent.tool_type)
