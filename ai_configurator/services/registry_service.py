@@ -36,6 +36,22 @@ class RegistryService:
             "https://raw.githubusercontent.com/modelcontextprotocol/servers/main/registry.json",
             # Add more registry sources as they become available
         ]
+        
+        # Ensure default MCP servers exist
+        self._ensure_default_servers()
+    
+    def _ensure_default_servers(self) -> None:
+        """Copy default MCP server configs if they don't exist."""
+        import ai_configurator
+        import shutil
+        
+        source_servers = Path(ai_configurator.__file__).parent.parent / "library" / "mcp-servers"
+        
+        if source_servers.exists():
+            for server_file in source_servers.glob("*.json"):
+                dest_file = self.registry_dir / server_file.name
+                if not dest_file.exists():
+                    shutil.copy2(server_file, dest_file)
     
     def load_registry(self) -> MCPServerRegistry:
         """Load registry from local file or create empty one."""
