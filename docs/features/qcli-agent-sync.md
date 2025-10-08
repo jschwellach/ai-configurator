@@ -221,24 +221,45 @@ Add to agent settings:
 ## Open Questions
 
 1. **Resource Path Resolution**: How to handle absolute paths in Q CLI agents that reference files outside the library?
-   - Option A: Copy files to library
-   - Option B: Keep absolute paths, show warning
-   - Option C: Ask user per file
+   - ~~Option A: Copy files to library~~
+   - ~~Option B: Keep absolute paths, show warning~~
+   - **✅ Option C: Ask user per file** (DECIDED)
+     - During import, prompt for each external file
+     - Options: "Copy to library" or "Keep absolute path"
+     - Show file path and size in prompt
+     - Remember choice for "Apply to all" option
 
 2. **MCP Server Configs**: Q CLI agents have full MCP configs inline. Should we:
-   - Option A: Extract to registry as new servers
-   - Option B: Keep inline in agent (duplicate configs)
-   - Option C: Match by name/command and link to existing
+   - **✅ Option A: Extract to registry as new servers** (DECIDED)
+     - Create server files in `~/.config/ai-configurator/registry/servers/`
+     - If name exists, append number (e.g., `fetch-2.json`, `fetch-3.json`)
+     - Agent references by name
+     - User can edit/delete/merge duplicates afterwards
+   - ~~Option B: Keep inline in agent (duplicate configs)~~
+   - ~~Option C: Match by name/command and link to existing~~
 
 3. **Sync Conflicts**: When both versions changed, how to merge?
-   - Option A: Manual merge only (user chooses)
-   - Option B: Smart merge (combine resources/servers)
-   - Option C: Three-way merge with common ancestor
+   - ~~Option A: Manual merge only (user chooses)~~
+   - **✅ Option B: Smart merge (combine resources/servers)** (DECIDED)
+     - Auto-merge non-conflicting changes:
+       - Resources: Union of both lists (combine unique items)
+       - MCP servers: Union of both lists
+       - Description: Keep local if both changed (prompt user)
+       - Prompt: Keep local if both changed (prompt user)
+     - Only prompt for actual conflicts (same field, different values)
+     - Show what was auto-merged in summary
+   - ~~Option C: Three-way merge with common ancestor~~
 
 4. **Performance**: With many agents, should we:
-   - Option A: Sync on-demand only
-   - Option B: Background sync with notifications
-   - Option C: Configurable sync interval
+   - **✅ Option A: Sync on-demand only** (DECIDED)
+     - User manually triggers "Import from Q CLI"
+     - No automatic background operations
+     - One-time import workflow (not continuous sync)
+     - User manages agents in AI Agent Manager after import
+     - Pros: Simple, predictable, no background processes
+     - Cons: User must manually re-import if they want to pull Q CLI changes again
+   - ~~Option B: Background sync with notifications~~
+   - ~~Option C: Configurable sync interval~~
 
 ## Success Metrics
 
