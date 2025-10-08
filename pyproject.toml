@@ -65,6 +65,7 @@ Repository = "https://github.com/your-org/ai-configurator.git"
 "Bug Tracker" = "https://github.com/your-org/ai-configurator/issues"
 
 [project.scripts]
+ai-agent-manager = "ai_configurator.main:main"
 ai-config = "ai_configurator.main:main"
 
 [tool.hatch.build.targets.wheel]
