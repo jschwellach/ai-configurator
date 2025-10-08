@@ -1,10 +1,11 @@
-"""Main TUI application for AI Configurator."""
+"""Main TUI application for AI Agent Manager."""
 import logging
 from pathlib import Path
 from textual.app import App, ComposeResult
 from textual.binding import Binding
 from textual.widgets import Header, Footer
 
+from ai_configurator.version import __title__
 from ai_configurator.tui.screens.main_menu import MainMenuScreen
 
 # Configure logging
@@ -25,10 +26,10 @@ logger = logging.getLogger(__name__)
 
 
 class AIConfiguratorApp(App):
-    """AI Configurator TUI Application."""
+    """AI Agent Manager TUI Application."""
     
     CSS_PATH = "styles/default.tcss"
-    TITLE = "AI Configurator v4.0"
+    TITLE = __title__
     
     BINDINGS = [
         Binding("q", "quit", "Quit", priority=True),
@@ -40,7 +41,7 @@ class AIConfiguratorApp(App):
     def on_mount(self) -> None:
         """Initialize application on startup."""
         try:
-            logger.info("AI Configurator TUI starting")
+            logger.info(f"{__title__} starting")
             self.push_screen(MainMenuScreen())
         except Exception as e:
             logger.error(f"Error mounting app: {e}", exc_info=True)
