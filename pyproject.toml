@@ -3,16 +3,16 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "ai-configurator"
+name = "q-agent-manager"
 version = "4.0.0"
-description = "Enhanced tool-agnostic knowledge library manager for AI tools and systems"
+description = "Terminal UI for managing Amazon Q CLI agents, resources, and MCP servers"
 readme = "README.md"
 requires-python = ">=3.9"
 license = "MIT"
 authors = [
     { name = "AI Configurator Team" },
 ]
-keywords = ["ai", "cli", "configuration", "mcp", "agents", "knowledge-management"]
+keywords = ["amazon-q", "q-cli", "agents", "mcp", "tui", "configuration", "knowledge-management"]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
