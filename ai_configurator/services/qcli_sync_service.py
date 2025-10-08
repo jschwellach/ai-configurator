@@ -84,46 +84,61 @@ class QCLISyncService:
         self,
         qcli_data: Dict,
         resource_paths: List[str],
-        mcp_server_names: List[str]
+        mcp_server_configs: Dict[str, Dict]
     ) -> AgentConfig:
         """Convert Q CLI agent format to AgentConfig.
         
         Args:
             qcli_data: Q CLI agent JSON data
             resource_paths: Resolved resource paths (relative to library)
-            mcp_server_names: MCP server names (after extraction to registry)
+            mcp_server_configs: MCP server configs dict {name: config}
             
         Returns:
             AgentConfig instance
         """
+        from ..models.value_objects import ResourcePath, ToolType
+        from ..models.mcp_server import MCPServerConfig
+        
+        # Convert resource paths to ResourcePath objects
+        resources = [
+            ResourcePath(path=path, type="file")
+            for path in resource_paths
+        ]
+        
+        # Convert MCP server configs to MCPServerConfig objects
+        mcp_servers = {
+            name: MCPServerConfig(**config)
+            for name, config in mcp_server_configs.items()
+        }
+        
         return AgentConfig(
             name=qcli_data.get("name", "imported-agent"),
             description=qcli_data.get("description", ""),
             prompt=qcli_data.get("instruction", ""),
-            tool_type="q-cli",
-            resources=resource_paths,
-            mcp_servers=mcp_server_names,
+            tool_type=ToolType.Q_CLI,
+            resources=resources,
+            mcp_servers=mcp_servers,
             settings={},
             created_at=datetime.now()
         )
     
-    def extract_mcp_servers(self, qcli_data: Dict) -> List[str]:
+    def extract_mcp_servers(self, qcli_data: Dict) -> Dict[str, Dict]:
         """Extract MCP servers from Q CLI agent and save to registry.
         
         Args:
             qcli_data: Q CLI agent JSON data
             
         Returns:
-            List of server names (after saving to registry)
+            Dict of server configs {name: config}
         """
         mcp_servers = qcli_data.get("mcpServers", {})
         if not mcp_servers:
-            return []
+            return {}
         
         servers_dir = self.registry_dir / "servers"
         servers_dir.mkdir(parents=True, exist_ok=True)
         
-        server_names = []
+        server_configs = {}
         for server_name, server_config in mcp_servers.items():
             # Find unique filename
             base_name = server_name
@@ -134,17 +149,17 @@ class QCLISyncService:
                 counter += 1
                 filename = f"{base_name}-{counter}.json"
             
-            # Save server config
+            # Save server config to registry
             server_data = {
                 "name": server_name,
                 **server_config
             }
             (servers_dir / filename).write_text(json.dumps(server_data, indent=2))
             
-            # Use the base name (without number) for agent reference
-            server_names.append(server_name)
+            # Store config for agent
+            server_configs[server_name] = server_config
         
-        return server_names
+        return server_configs
     
     def resolve_resource_paths(
         self,
@@ -232,7 +247,7 @@ class QCLISyncService:
         local_config: AgentConfig,
         qcli_data: Dict,
         qcli_resources: List[str],
-        qcli_mcp_servers: List[str]
+        qcli_mcp_configs: Dict[str, Dict]
     ) -> Tuple[AgentConfig, List[str]]:
         """Smart merge local and Q CLI agent configurations.
         
@@ -243,27 +258,39 @@ class QCLISyncService:
             local_config: Existing local AgentConfig
             qcli_data: Q CLI agent JSON data
             qcli_resources: Resolved Q CLI resource paths
-            qcli_mcp_servers: Q CLI MCP server names
+            qcli_mcp_configs: Q CLI MCP server configs dict
             
         Returns:
             Tuple of (merged AgentConfig, list of merge messages)
         """
+        from ..models.value_objects import ResourcePath
+        from ..models.mcp_server import MCPServerConfig
+        
         merge_messages = []
         
+        # Get local resource paths as strings
+        local_resource_paths = [r.path for r in local_config.resources]
+        
         # Merge resources (union of both lists)
-        merged_resources = list(set(local_config.resources + qcli_resources))
-        if len(merged_resources) > len(local_config.resources):
-            added = len(merged_resources) - len(local_config.resources)
+        merged_resource_paths = list(set(local_resource_paths + qcli_resources))
+        if len(merged_resource_paths) > len(local_resource_paths):
+            added = len(merged_resource_paths) - len(local_resource_paths)
             merge_messages.append(f"Added {added} resource(s) from Q CLI")
         
-        # Merge MCP servers (union of both lists)
-        merged_mcp_servers = list(set(local_config.mcp_servers + qcli_mcp_servers))
-        if len(merged_mcp_servers) > len(local_config.mcp_servers):
-            added = len(merged_mcp_servers) - len(local_config.mcp_servers)
-            merge_messages.append(f"Added {added} MCP server(s) from Q CLI")
+        # Convert to ResourcePath objects
+        merged_resources = [
+            ResourcePath(path=path, type="file")
+            for path in merged_resource_paths
+        ]
+        
+        # Merge MCP servers (union of both dicts)
+        merged_mcp_servers = dict(local_config.mcp_servers)
+        for name, config in qcli_mcp_configs.items():
+            if name not in merged_mcp_servers:
+                merged_mcp_servers[name] = MCPServerConfig(**config)
+                merge_messages.append(f"Added MCP server: {name}")
         
         # For description and prompt, keep local if different
-        # (User can manually edit if they want Q CLI version)
         qcli_description = qcli_data.get("description", "")
         qcli_prompt = qcli_data.get("instruction", "")
         
@@ -276,8 +303,8 @@ class QCLISyncService:
         # Create merged config
         merged_config = AgentConfig(
             name=local_config.name,
-            description=local_config.description,  # Keep local
-            prompt=local_config.prompt,  # Keep local
+            description=local_config.description,
+            prompt=local_config.prompt,
             tool_type=local_config.tool_type,
             resources=merged_resources,
             mcp_servers=merged_mcp_servers,
@@ -307,8 +334,8 @@ class QCLISyncService:
             if not qcli_data:
                 return False, f"Agent {agent_name} not found in Q CLI"
             
-            # Extract MCP servers
-            mcp_server_names = self.extract_mcp_servers(qcli_data)
+            # Extract MCP servers (returns dict of configs)
+            mcp_server_configs = self.extract_mcp_servers(qcli_data)
             
             # Resolve resource paths
             resource_paths = self.resolve_resource_paths(qcli_data, copy_to_library_callback)
@@ -325,7 +352,7 @@ class QCLISyncService:
                     local_config,
                     qcli_data,
                     resource_paths,
-                    mcp_server_names
+                    mcp_server_configs
                 )
                 
                 # Save merged config
@@ -340,7 +367,7 @@ class QCLISyncService:
                 agent_config = self.convert_qcli_to_agent_config(
                     qcli_data,
                     resource_paths,
-                    mcp_server_names
+                    mcp_server_configs
                 )
                 
                 agent_file.write_text(json.dumps(agent_config.dict(), indent=2, default=str))
