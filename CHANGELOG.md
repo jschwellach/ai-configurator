@@ -2,6 +2,76 @@
 
 All notable changes to AI Agent Manager will be documented in this file.
 
+## [0.2.0] - 2025-10-08
+
+### 🎉 Q CLI Agent Import Feature
+
+Import existing Q CLI agents into AI Agent Manager with smart merge and resource handling.
+
+### ✨ Added
+
+**Q CLI Import:**
+- Import agents from `~/.aws/amazonq/cli-agents/` with `i` key in Agent Management
+- Multi-select agents to import with Space key
+- Smart merge for agents that exist in both locations
+  - Combines resources and MCP servers (union)
+  - Keeps local description/prompt when different
+  - Shows merge summary
+- Resource path resolution with user prompts
+  - "Copy to library" or "Keep absolute path" per file
+  - "Apply to All" option for bulk operations
+  - Handles `file://` URIs from Q CLI
+- MCP server extraction to registry
+  - Auto-numbering for duplicate names (e.g., `fetch-2.json`)
+  - Preserves full server configuration
+- Import selection screen shows:
+  - New agents (green)
+  - Existing agents that will be merged (yellow)
+  - Selection count
+- Detailed error messages in notifications
+
+### 🐛 Fixed
+
+- Handle `file://` URI prefix in Q CLI resource paths
+- Expand `~` in file paths
+- Skip non-existent resource files gracefully
+- Use correct Pydantic models (ResourcePath, MCPServerConfig)
+- Add required `source` field to ResourcePath objects
+- Use correct filename format: `{name}_{tool_type}.json`
+- Improved error logging and user feedback
+
+### 📝 Notes
+
+This implements Phase 1 of the Q CLI sync feature. Import is one-way (Q CLI → AI Agent Manager). Future versions may add bidirectional sync.
+
+---
+
+## [0.1.3] - 2025-10-08
+
+### 🐛 Fixed
+
+- Copy default MCP servers to `servers/` subdirectory where MCP manager expects them
+
+---
+
+## [0.1.2] - 2025-10-08
+
+### ✨ Added
+
+- 4 default MCP servers: fetch, browser, filesystem, github
+- Automatically copied to user's registry on first run
+
+---
+
+## [0.1.1] - 2025-10-08
+
+### 🐛 Fixed
+
+- Include `ai_configurator` module in wheel package
+- Fix package build configuration
+
+---
+
 ## [0.1.0] - 2025-10-08
 
 ### 🎉 Initial Beta Release
