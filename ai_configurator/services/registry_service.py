@@ -46,10 +46,12 @@ class RegistryService:
         import shutil
         
         source_servers = Path(ai_configurator.__file__).parent.parent / "library" / "mcp-servers"
+        servers_dir = self.registry_dir / "servers"
+        servers_dir.mkdir(parents=True, exist_ok=True)
         
         if source_servers.exists():
             for server_file in source_servers.glob("*.json"):
-                dest_file = self.registry_dir / server_file.name
+                dest_file = servers_dir / server_file.name
                 if not dest_file.exists():
                     shutil.copy2(server_file, dest_file)
     
