@@ -21,6 +21,7 @@ class AgentManagerScreen(BaseScreen):
         Binding("e", "edit_agent", "Edit"),
         Binding("m", "rename_agent", "Rename"),
         Binding("d", "delete_agent", "Delete"),
+        Binding("i", "import_qcli", "Import Q CLI"),
         Binding("x", "export_agent", "Export"),
         Binding("r", "refresh", "Refresh"),
     ]
@@ -36,7 +37,7 @@ class AgentManagerScreen(BaseScreen):
         """Build screen layout."""
         yield Header()
         yield Container(
-            Static("[bold cyan]Agent Management[/bold cyan]\n[dim]n=New e=Edit m=Rename d=Delete x=Export r=Refresh[/dim]", id="title"),
+            Static("[bold cyan]Agent Management[/bold cyan]\n[dim]n=New e=Edit m=Rename d=Delete i=Import x=Export r=Refresh[/dim]", id="title"),
             DataTable(id="agent_table", classes="agent-list"),
             id="agent-container"
         )
@@ -164,6 +165,11 @@ class AgentManagerScreen(BaseScreen):
         except Exception as e:
             logger.error(f"Error exporting agent: {e}", exc_info=True)
             self.show_notification(f"Error: {e}", "error")
+    
+    def action_import_qcli(self) -> None:
+        """Import agents from Q CLI."""
+        from ai_configurator.tui.screens.qcli_import import QCLIImportScreen
+        self.app.push_screen(QCLIImportScreen())
     
     def action_rename_agent(self) -> None:
         """Rename selected agent."""
