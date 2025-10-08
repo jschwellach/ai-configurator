@@ -96,14 +96,19 @@ class QCLISyncService:
         Returns:
             AgentConfig instance
         """
-        from ..models.value_objects import ResourcePath, ToolType
+        from ..models.value_objects import ResourcePath, ToolType, LibrarySource
         from ..models.mcp_server import MCPServerConfig
         
         # Convert resource paths to ResourcePath objects
-        resources = [
-            ResourcePath(path=path, type="file")
-            for path in resource_paths
-        ]
+        resources = []
+        for path in resource_paths:
+            # Determine source based on path
+            if path.startswith("personal/"):
+                source = LibrarySource.PERSONAL
+            else:
+                source = LibrarySource.BASE
+            
+            resources.append(ResourcePath(path=path, source=source))
         
         # Convert MCP server configs to MCPServerConfig objects
         mcp_servers = {
@@ -263,7 +268,7 @@ class QCLISyncService:
         Returns:
             Tuple of (merged AgentConfig, list of merge messages)
         """
-        from ..models.value_objects import ResourcePath
+        from ..models.value_objects import ResourcePath, LibrarySource
         from ..models.mcp_server import MCPServerConfig
         
         merge_messages = []
@@ -278,10 +283,15 @@ class QCLISyncService:
             merge_messages.append(f"Added {added} resource(s) from Q CLI")
         
         # Convert to ResourcePath objects
-        merged_resources = [
-            ResourcePath(path=path, type="file")
-            for path in merged_resource_paths
-        ]
+        merged_resources = []
+        for path in merged_resource_paths:
+            # Determine source based on path
+            if path.startswith("personal/"):
+                source = LibrarySource.PERSONAL
+            else:
+                source = LibrarySource.BASE
+            
+            merged_resources.append(ResourcePath(path=path, source=source))
         
         # Merge MCP servers (union of both dicts)
         merged_mcp_servers = dict(local_config.mcp_servers)
