@@ -1,7 +1,0 @@
-name: "invalid-trigger"
-description: "Hook with invalid trigger value"
-type: "context"
-trigger: "invalid_trigger_name"
-context:
-  sources:
-    - "contexts/test.md"

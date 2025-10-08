@@ -1,9 +1,0 @@
-name: "broken-references"
-description: "Profile with broken file references"
-contexts:
-  - "contexts/nonexistent.md"
-  - "contexts/also-missing.md"
-hooks:
-  on_session_start:
-    - name: "missing-hook"
-      enabled: true

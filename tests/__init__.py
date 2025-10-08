@@ -1,1 +1,1 @@
-# Test package for AI Configurator
+# AI Configurator Tests
