@@ -1,9 +1,10 @@
-"""Main menu screen for AI Configurator TUI."""
+"""Main menu screen for AI Agent Manager TUI."""
 from textual.app import ComposeResult
 from textual.containers import Container, Vertical
 from textual.widgets import Header, Footer, Static, Button
 from textual.binding import Binding
 
+from ai_configurator.version import __title__
 from ai_configurator.tui.screens.base import BaseScreen
 from ai_configurator.services.agent_service import AgentService
 from ai_configurator.services.library_service import LibraryService
@@ -24,7 +25,7 @@ class MainMenuScreen(BaseScreen):
         """Build screen layout."""
         yield Header()
         yield Container(
-            Static("[bold cyan]AI Configurator v4.0[/bold cyan]\n", id="title"),
+            Static(f"[bold cyan]{__title__}[/bold cyan]\n", id="title"),
             Static(self.get_status_text(), id="status"),
             Vertical(
                 Button("1. Agent Management", id="agents", variant="primary"),

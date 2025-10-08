@@ -54,6 +54,10 @@ class AgentManagerScreen(BaseScreen):
     def refresh_data(self) -> None:
         """Refresh agent list."""
         table = self.query_one(DataTable)
+        
+        # Save cursor position
+        cursor_row = table.cursor_row if table.cursor_row is not None else 0
+        
         table.clear()
         
         try:
@@ -66,10 +70,12 @@ class AgentManagerScreen(BaseScreen):
                     agent.health_status.value
                 )
             
-            # Auto-select first row if available
+            # Restore cursor position or select first row
             if len(agents) > 0:
-                self.selected_agent = agents[0].name
-                self.selected_tool = agents[0].tool_type
+                target_row = min(cursor_row, len(agents) - 1)
+                table.move_cursor(row=target_row)
+                self.selected_agent = agents[target_row].name
+                self.selected_tool = agents[target_row].tool_type
                 
         except Exception as e:
             logger.error(f"Error loading agents: {e}", exc_info=True)

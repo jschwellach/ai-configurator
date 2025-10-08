@@ -88,6 +88,10 @@ class QCLIImportScreen(BaseScreen):
     def refresh_data(self) -> None:
         """Refresh agent list."""
         table = self.query_one(DataTable)
+        
+        # Save cursor position
+        cursor_row = table.cursor_row if table.cursor_row is not None else 0
+        
         table.clear()
         
         # Get importable agents
@@ -101,6 +105,10 @@ class QCLIImportScreen(BaseScreen):
         for agent_name in conflicting:
             checkbox = "[X]" if agent_name in self.selected_agents else "[ ]"
             table.add_row(checkbox, agent_name, "[yellow]Exists (will merge)[/yellow]")
+        
+        # Restore cursor position
+        if table.row_count > 0:
+            table.move_cursor(row=min(cursor_row, table.row_count - 1))
         
         # Update status
         status = self.query_one("#status", Static)
