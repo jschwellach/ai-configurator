@@ -1,15 +1,15 @@
-# AI Configurator v4.0
+# AI Agent Manager v0.1.0 (Beta)
 
-**Visual knowledge library and agent manager for Amazon Q CLI with TUI interface.**
+**Terminal UI for managing AI agents, resources, and MCP servers across multiple AI tools.**
 
 ## 🎯 What It Does
 
-AI Configurator helps you manage Amazon Q CLI agents with a visual interface:
+AI Agent Manager helps you manage AI agents (Amazon Q CLI, Claude, etc.) with a visual terminal interface:
 - 📚 **Library Management**: Organize knowledge files (templates, rules, docs)
-- 🤖 **Agent Configuration**: Create and edit Q CLI agents visually
+- 🤖 **Agent Configuration**: Create and edit AI agents visually
 - 🔌 **MCP Server Management**: Add and configure Model Context Protocol servers
 - 🎨 **Dual-Pane Editor**: Select resources and MCP servers with checkboxes
-- 🔄 **Auto-Sync**: Agents automatically export to `~/.aws/amazonq/agents/`
+- 🔄 **Auto-Export**: Agents automatically export to Q CLI directory
 
 ## ✨ Key Features
 
@@ -21,7 +21,7 @@ AI Configurator helps you manage Amazon Q CLI agents with a visual interface:
 - **Auto-Export**: Changes sync to Q CLI automatically
 
 ### 📚 **Library System**
-- **Base Library**: Shared templates and rules
+- **Base Library**: Shared templates and rules (5 default templates included)
 - **Personal Library**: Your custom files
 - **Clone & Edit**: Copy base files to personal for customization
 - **Visual Separation**: Clear distinction between base and personal files
@@ -36,10 +36,10 @@ AI Configurator helps you manage Amazon Q CLI agents with a visual interface:
 
 ```bash
 # Install from PyPI
-pip install ai-configurator
+pip install ai-agent-manager
 
 # Or install from source
-git clone https://github.com/yourusername/ai-configurator.git
+git clone https://github.com/jschwellach/ai-configurator.git
 cd ai-configurator
 pip install -e .
 ```
@@ -48,7 +48,8 @@ pip install -e .
 
 ### Launch TUI
 ```bash
-# Start the visual interface
+ai-agent-manager
+# or shorthand:
 ai-config
 
 # Navigate with:

@@ -1,12 +1,61 @@
 # Changelog
 
-All notable changes to AI Configurator will be documented in this file.
+All notable changes to AI Agent Manager will be documented in this file.
 
-## [4.0.0] - 2025-10-08
+## [0.1.0] - 2025-10-08
+
+### 🎉 Initial Beta Release
+
+First public release of AI Agent Manager - a terminal UI for managing AI agents across multiple tools.
+
+### ✨ Features
+
+**TUI (Terminal User Interface):**
+- Visual menu-driven interface with keyboard navigation
+- Dual-pane agent editor with multi-select (Space key)
+- Real-time agent configuration preview
+- Integrated help and keyboard shortcuts
+- Error logging to `~/.config/ai-configurator/logs/tui.log`
+
+**Agent Management:**
+- Create, edit, rename, delete agents
+- Visual resource selection with checkboxes
+- Visual MCP server selection with checkboxes
+- Auto-export to Q CLI (`~/.aws/amazonq/cli-agents/`)
+- Manual export with `x` key
+- Agent validation
+
+**Library Management:**
+- Base library with 5 default templates (daily-assistant, software-engineer, system-administrator, product-owner, software-architect)
+- Personal library for custom files
+- Clone base files to personal for editing
+- Create new files with templates
+- Visual separation of base vs personal files
+
+**MCP Server Management:**
+- Add servers by pasting JSON configs
+- Flexible JSON parsing (handles multiple formats)
+- Edit server configurations
+- Delete servers
+- Browse MCP registry
+
+**Package:**
+- Published as `ai-agent-manager` on PyPI
+- CLI commands: `ai-agent-manager` and `ai-config`
+- Bundled templates included in package
+- GitHub Actions CI/CD pipeline
+
+### 📝 Notes
+
+This is a beta release. Feedback and bug reports welcome at https://github.com/jschwellach/ai-configurator/issues
+
+---
+
+## [4.0.0] - 2025-10-07 (Internal)
 
 ### 🎉 Major Release - Complete Redesign
 
-AI Configurator v4.0 is a complete rewrite focused on Amazon Q CLI integration with a visual TUI interface.
+AI Configurator v4.0 was a complete rewrite focused on Amazon Q CLI integration with a visual TUI interface.
 
 ### ✨ Added
 
