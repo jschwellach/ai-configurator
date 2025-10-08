@@ -27,11 +27,6 @@ class LibraryService:
     def _ensure_templates(self) -> None:
         """Ensure templates directory exists with default templates."""
         templates_dir = self.base_path / "templates"
-        
-        if templates_dir.exists():
-            return  # Templates already exist
-        
-        # Create templates directory
         templates_dir.mkdir(parents=True, exist_ok=True)
         
         # Copy templates from source if available
@@ -39,11 +34,13 @@ class LibraryService:
         source_templates = Path(ai_configurator.__file__).parent.parent / "library" / "templates"
         
         if source_templates.exists():
-            import shutil
+            # Copy any missing templates
             for template_file in source_templates.glob("*.md"):
-                shutil.copy2(template_file, templates_dir)
-        else:
-            # Create basic templates
+                dest_file = templates_dir / template_file.name
+                if not dest_file.exists():
+                    shutil.copy2(template_file, dest_file)
+        elif not any(templates_dir.glob("*.md")):
+            # Only create defaults if no templates exist at all
             self._create_default_templates(templates_dir)
     
     def _create_default_templates(self, templates_dir: Path) -> None:

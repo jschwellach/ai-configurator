@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "ai-agent-manager"
-version = "4.0.2"
+version = "4.0.3"
 description = "Terminal UI for managing AI agents, resources, and MCP servers across multiple AI tools"
 readme = "README.md"
 requires-python = ">=3.9"
@@ -69,7 +69,7 @@ ai-agent-manager = "ai_configurator.main:main"
 ai-config = "ai_configurator.main:main"
 
 [tool.hatch.build.targets.wheel]
-packages = ["ai_configurator"]
+packages = ["ai_configurator", "library"]
 
 [tool.hatch.build.targets.sdist]
 include = [
