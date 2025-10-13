@@ -26,6 +26,7 @@ class AgentConfig(BaseModel):
     prompt: Optional[str] = Field(default=None, description="Custom instructions/rules (system prompt)")
     tool_type: ToolType = Field(..., description="Target AI tool")
     resources: List[ResourcePath] = Field(default_factory=list)
+    context_patterns: List[str] = Field(default_factory=list, description="File patterns for additional context")
     mcp_servers: Dict[str, MCPServerConfig] = Field(default_factory=dict)
     settings: AgentSettings = Field(default_factory=AgentSettings)
     created_at: datetime = Field(default_factory=datetime.now)
@@ -81,12 +82,22 @@ class Agent(BaseModel):
     
     def to_q_cli_format(self) -> Dict[str, Any]:
         """Export agent configuration for Q CLI."""
+        # Combine regular resources and context patterns
+        all_resources = [r.to_file_uri() for r in self.config.resources]
+        
+        # Add context patterns with file:// prefix
+        for pattern in self.config.context_patterns:
+            if not pattern.startswith('file://'):
+                all_resources.append(f"file://{pattern}")
+            else:
+                all_resources.append(pattern)
+        
         return {
             "$schema": "https://raw.githubusercontent.com/aws/amazon-q-developer-cli/refs/heads/main/schemas/agent-v1.json",
             "name": self.config.name,
             "description": self.config.description or None,
             "prompt": self.config.prompt,
-            "resources": [r.to_file_uri() for r in self.config.resources],
+            "resources": all_resources,
             "tools": self.config.settings.tools,
             "allowedTools": self.config.settings.allowed_tools,
             "toolAliases": self.config.settings.tool_aliases,
