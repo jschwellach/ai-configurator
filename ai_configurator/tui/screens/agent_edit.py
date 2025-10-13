@@ -20,6 +20,9 @@ class AgentEditScreen(BaseScreen):
     BINDINGS = [
         Binding("ctrl+s", "save", "Save"),
         Binding("space", "toggle_select", "Select/Deselect"),
+        Binding("a", "add_pattern", "Add Pattern"),
+        Binding("d", "remove_pattern", "Delete Pattern"),
+        Binding("e", "edit_pattern", "Edit Pattern"),
         Binding("escape", "cancel", "Cancel"),
     ]
     
@@ -62,16 +65,22 @@ class AgentEditScreen(BaseScreen):
         # Pre-select items already in agent
         self.selected_files = set(r.path for r in agent.config.resources if r.path in self.available_files)
         self.selected_servers = set(name for name in agent.config.mcp_servers.keys() if name in self.available_servers)
+        
+        # Context patterns management
+        self.context_patterns = list(agent.config.context_patterns)
     
     def compose(self) -> ComposeResult:
         """Build layout."""
         yield Header()
         yield Container(
-            Static(f"[bold cyan]Edit Agent: {self.agent.name}[/bold cyan]\n[dim]Space=Select Ctrl+S=Save Esc=Cancel[/dim]", id="title"),
+            Static(f"[bold cyan]Edit Agent: {self.agent.name}[/bold cyan]\n[dim]Space=Select Ctrl+S=Save A=Add D=Delete E=Edit Esc=Cancel[/dim]", id="title"),
             
-            # Context patterns input
-            Label("[bold]Context File Patterns[/bold] [dim](e.g., .amazonq/rules/**/*.md)[/dim]"),
-            Input(placeholder="Enter file patterns, one per line", id="context_input"),
+            # Context patterns section
+            Vertical(
+                Label("[bold]Context File Patterns[/bold]"),
+                DataTable(id="patterns_table", classes="patterns-table"),
+                classes="patterns-section"
+            ),
             
             Horizontal(
                 # Left pane: Available items
@@ -98,11 +107,12 @@ class AgentEditScreen(BaseScreen):
     
     def on_mount(self) -> None:
         """Initialize tables and input."""
-        # Setup context input
-        context_input = self.query_one("#context_input", Input)
-        context_input.value = "\n".join(self.agent.config.context_patterns)
+        # Setup patterns table
+        patterns_table = self.query_one("#patterns_table", DataTable)
+        patterns_table.add_column("Pattern")
+        patterns_table.cursor_type = "row"
         
-        # Setup tables
+        # Setup other tables
         avail_files = self.query_one("#available_files", DataTable)
         avail_files.add_column("File")
         avail_files.cursor_type = "row"
@@ -120,10 +130,16 @@ class AgentEditScreen(BaseScreen):
         sel_servers.cursor_type = "row"
         
         self.refresh_all_tables()
-        avail_files.focus()
+        patterns_table.focus()
     
     def refresh_all_tables(self) -> None:
         """Refresh all tables."""
+        # Patterns table
+        patterns_table = self.query_one("#patterns_table", DataTable)
+        patterns_table.clear()
+        for pattern in self.context_patterns:
+            patterns_table.add_row(pattern)
+        
         # Available files
         avail_files = self.query_one("#available_files", DataTable)
         avail_files.clear()
@@ -195,12 +211,72 @@ class AgentEditScreen(BaseScreen):
         except Exception as e:
             logger.error(f"Error toggling selection: {e}", exc_info=True)
     
+    def action_add_pattern(self) -> None:
+        """Add a new context pattern."""
+        from textual.widgets import Input
+        from textual.screen import ModalScreen
+        from textual.containers import Vertical
+        
+        class PatternInputScreen(ModalScreen):
+            """Simple pattern input screen."""
+            def compose(self):
+                yield Vertical(
+                    Static("[bold]Add Context Pattern[/bold]\nEnter file pattern (e.g., .amazonq/rules/**/*.md):"),
+                    Input(placeholder="**/*.md", id="pattern_input"),
+                    id="input_dialog"
+                )
+            
+            def on_input_submitted(self, event: Input.Submitted):
+                self.dismiss(event.value)
+        
+        def handle_pattern(pattern: str) -> None:
+            if pattern and pattern.strip():
+                self.context_patterns.append(pattern.strip())
+                self.refresh_all_tables()
+        
+        self.app.push_screen(PatternInputScreen(), handle_pattern)
+    
+    def action_remove_pattern(self) -> None:
+        """Remove selected pattern."""
+        patterns_table = self.query_one("#patterns_table", DataTable)
+        if patterns_table.cursor_row < len(self.context_patterns):
+            del self.context_patterns[patterns_table.cursor_row]
+            self.refresh_all_tables()
+    
+    def action_edit_pattern(self) -> None:
+        """Edit selected pattern."""
+        patterns_table = self.query_one("#patterns_table", DataTable)
+        if patterns_table.cursor_row < len(self.context_patterns):
+            current_pattern = self.context_patterns[patterns_table.cursor_row]
+            
+            from textual.widgets import Input
+            from textual.screen import ModalScreen
+            from textual.containers import Vertical
+            
+            class PatternEditScreen(ModalScreen):
+                """Pattern edit screen."""
+                def compose(self):
+                    yield Vertical(
+                        Static("[bold]Edit Context Pattern[/bold]"),
+                        Input(placeholder="**/*.md", id="pattern_input", value=current_pattern),
+                        id="input_dialog"
+                    )
+                
+                def on_input_submitted(self, event: Input.Submitted):
+                    self.dismiss(event.value)
+            
+            def handle_edit(pattern: str) -> None:
+                if pattern and pattern.strip():
+                    self.context_patterns[patterns_table.cursor_row] = pattern.strip()
+                    self.refresh_all_tables()
+            
+            self.app.push_screen(PatternEditScreen(), handle_edit)
+    
     def action_save(self) -> None:
         """Save agent changes."""
         try:
-            # Get context patterns from input
-            context_input = self.query_one("#context_input", Input)
-            context_patterns = [p.strip() for p in context_input.value.split('\n') if p.strip()]
+            # Use the managed context patterns list
+            context_patterns = self.context_patterns
             
             # Build new resource list
             new_resources = []

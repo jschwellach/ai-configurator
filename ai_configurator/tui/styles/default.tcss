@@ -90,3 +90,13 @@ DataTable:focus > .datatable--cursor {
 .right-pane-bottom {
     height: 50%;
 }
+
+/* Context patterns section */
+.patterns-section {
+    height: 6;
+    margin: 1 0;
+}
+
+.patterns-table {
+    height: 4;
+}
