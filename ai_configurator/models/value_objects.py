@@ -57,7 +57,26 @@ class ResourcePath(BaseModel):
     
     def to_file_uri(self) -> str:
         """Convert to file:// URI format."""
-        return f"file://{self.path}"
+        from pathlib import Path
+        
+        # If path is already absolute, use as-is
+        if Path(self.path).is_absolute():
+            return f"file://{self.path}"
+        
+        # For relative paths, resolve based on source
+        if self.source == LibrarySource.BASE:
+            from ai_configurator.tui.config import get_library_paths
+            base_path, _ = get_library_paths()
+            full_path = base_path / self.path
+            return f"file://{full_path}"
+        elif self.source == LibrarySource.PERSONAL:
+            from ai_configurator.tui.config import get_library_paths
+            _, personal_path = get_library_paths()
+            full_path = personal_path / self.path
+            return f"file://{full_path}"
+        else:
+            # Fallback to relative path
+            return f"file://{self.path}"
     
     class Config:
         frozen = True
