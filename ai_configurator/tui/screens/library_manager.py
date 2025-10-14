@@ -297,7 +297,9 @@ class LibraryManagerScreen(BaseScreen):
                 return
             
             logger.info(f"Opening editor: {editor} {file_path}")
-            subprocess.run([editor, str(file_path)])
+            # Suspend TUI and run editor
+            with self.app.suspend():
+                subprocess.run([editor, str(file_path)])
             
             self.show_notification(f"Edited: {self.selected_file}", "information")
             self.refresh_data()

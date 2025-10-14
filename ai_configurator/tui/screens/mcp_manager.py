@@ -162,11 +162,12 @@ class MCPManagerScreen(BaseScreen):
                 self.show_notification("No editor found. Set $EDITOR environment variable.", "error")
                 return
             
-            # Run editor with blocking for GUI editors
-            if 'kate' in editor:
-                subprocess.run([editor, '--block', temp_file])
-            else:
-                subprocess.run([editor, temp_file])
+            # Suspend TUI and run editor
+            with self.app.suspend():
+                if 'kate' in editor:
+                    subprocess.run([editor, '--block', temp_file])
+                else:
+                    subprocess.run([editor, temp_file])
             
             # Read the edited content
             with open(temp_file, 'r') as f:
@@ -267,7 +268,9 @@ class MCPManagerScreen(BaseScreen):
                 self.show_notification("No editor found. Set $EDITOR environment variable.", "error")
                 return
             
-            subprocess.run([editor, str(server_file)])
+            # Suspend TUI and run editor
+            with self.app.suspend():
+                subprocess.run([editor, str(server_file)])
             
             # Validate and fix the JSON if needed
             try:
