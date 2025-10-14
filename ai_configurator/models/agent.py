@@ -101,7 +101,7 @@ class Agent(BaseModel):
             "tools": self.config.settings.tools,
             "allowedTools": self.config.settings.allowed_tools,
             "toolAliases": self.config.settings.tool_aliases,
-            "mcpServers": {name: config.dict() for name, config in self.config.mcp_servers.items()},
+            "mcpServers": {name: config.dict(by_alias=True) for name, config in self.config.mcp_servers.items()},
             "toolsSettings": self.config.settings.tools_settings,
             "useLegacyMcpJson": self.config.settings.use_legacy_mcp_json,
         }

@@ -328,9 +328,21 @@ class AgentManager:
             return None
     
     def _add_role_mcp_configs(self, agent: AgentConfig, rules: List[str]):
-        """Add MCP configurations from role files."""
+        """Add MCP configurations from registry (updated approach)."""
+        # Load MCP servers from registry directory instead of role files
+        registry_dir = self.config_dir / "registry" / "servers"
+        if registry_dir.exists():
+            for server_file in registry_dir.glob("*.json"):
+                try:
+                    with open(server_file, 'r', encoding='utf-8') as f:
+                        server_config = json.load(f)
+                    server_name = server_file.stem
+                    agent.add_mcp_server(server_name, server_config)
+                except Exception as e:
+                    print(f"Warning: Could not load MCP server {server_file.stem}: {e}")
+        
+        # Fallback: Load from role-specific files for backward compatibility
         for rule in rules:
-            # Extract role name from rule path (e.g., "roles/software-engineer/software-engineer.md")
             if rule.startswith("roles/") and "/" in rule:
                 role_name = rule.split("/")[1]
                 mcp_config = self.library_manager.get_role_mcp_config(role_name)

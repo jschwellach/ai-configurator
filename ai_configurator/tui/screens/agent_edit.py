@@ -20,6 +20,7 @@ class AgentEditScreen(BaseScreen):
     BINDINGS = [
         Binding("ctrl+s", "save", "Save"),
         Binding("space", "toggle_select", "Select/Deselect"),
+        Binding("t", "toggle_trust", "Trust/Untrust"),
         Binding("a", "add_pattern", "Add Pattern"),
         Binding("d", "remove_pattern", "Delete Pattern"),
         Binding("e", "edit_pattern", "Edit Pattern"),
@@ -66,6 +67,12 @@ class AgentEditScreen(BaseScreen):
         self.selected_files = set(r.path for r in agent.config.resources if r.path in self.available_files)
         self.selected_servers = set(name for name in agent.config.mcp_servers.keys() if name in self.available_servers)
         
+        # Track trusted servers (those with autoApprove tools)
+        self.trusted_servers = set()
+        for name, server_config in agent.config.mcp_servers.items():
+            if hasattr(server_config, 'auto_approve') and server_config.auto_approve:
+                self.trusted_servers.add(name)
+        
         # Context patterns management
         self.context_patterns = list(agent.config.context_patterns)
     
@@ -73,7 +80,7 @@ class AgentEditScreen(BaseScreen):
         """Build layout."""
         yield Header()
         yield Container(
-            Static(f"[bold cyan]Edit Agent: {self.agent.name}[/bold cyan]\n[dim]Space=Select Ctrl+S=Save A=Add D=Delete E=Edit Esc=Cancel[/dim]", id="title"),
+            Static(f"[bold cyan]Edit Agent: {self.agent.name}[/bold cyan]\n[dim]Space=Select T=Trust Ctrl+S=Save A=Add D=Delete E=Edit Esc=Cancel[/dim]", id="title"),
             
             # Context patterns section
             Vertical(
@@ -124,10 +131,12 @@ class AgentEditScreen(BaseScreen):
         sel_files = self.query_one("#selected_files", DataTable)
         sel_files.add_column("File")
         sel_files.cursor_type = "row"
+        sel_files.can_focus = False  # Disable focus on read-only panel
         
         sel_servers = self.query_one("#selected_servers", DataTable)
         sel_servers.add_column("Server")
         sel_servers.cursor_type = "row"
+        sel_servers.can_focus = False  # Disable focus on read-only panel
         
         self.refresh_all_tables()
         patterns_table.focus()
@@ -152,7 +161,8 @@ class AgentEditScreen(BaseScreen):
         avail_servers.clear()
         for name in sorted(self.available_servers.keys()):
             checkbox = "[X]" if name in self.selected_servers else "[ ]"
-            avail_servers.add_row(f"{checkbox} {name}")
+            trusted_text = " (trusted)" if name in self.trusted_servers else ""
+            avail_servers.add_row(f"{checkbox} {name}{trusted_text}")
         
         # Selected files
         sel_files = self.query_one("#selected_files", DataTable)
@@ -196,7 +206,9 @@ class AgentEditScreen(BaseScreen):
                 table = self.query_one("#available_servers", DataTable)
                 if table.cursor_row < table.row_count:
                     row = table.get_row_at(table.cursor_row)
-                    name = str(row[0])[4:]  # Skip "[ ] " or "[X] "
+                    # Extract name, handling "(trusted)" suffix
+                    full_text = str(row[0])[4:]  # Skip "[ ] " or "[X] "
+                    name = full_text.split(" (trusted)")[0]  # Remove "(trusted)" if present
                     
                     if name in self.selected_servers:
                         self.selected_servers.discard(name)
@@ -210,6 +222,35 @@ class AgentEditScreen(BaseScreen):
                     
         except Exception as e:
             logger.error(f"Error toggling selection: {e}", exc_info=True)
+    
+    def action_toggle_trust(self) -> None:
+        """Toggle trust status of selected MCP server."""
+        focused = self.app.focused
+        if focused is None or focused.id != "available_servers":
+            return
+        
+        table = self.query_one("#available_servers", DataTable)
+        if table.cursor_row < table.row_count:
+            try:
+                cursor_row = table.cursor_row  # Save cursor position
+                row = table.get_row_at(table.cursor_row)
+                # Extract name, handling "(trusted)" suffix
+                full_text = str(row[0])[4:]  # Skip "[ ] " or "[X] "
+                name = full_text.split(" (trusted)")[0]  # Remove "(trusted)" if present
+                
+                if name in self.trusted_servers:
+                    self.trusted_servers.discard(name)
+                else:
+                    self.trusted_servers.add(name)
+                
+                self.refresh_all_tables()
+                table.focus()
+                # Restore cursor position
+                if table.row_count > 0:
+                    table.move_cursor(row=min(cursor_row, table.row_count - 1))
+                
+            except Exception as e:
+                logger.error(f"Error toggling trust: {e}", exc_info=True)
     
     def action_add_pattern(self) -> None:
         """Add a new context pattern."""
@@ -288,23 +329,41 @@ class AgentEditScreen(BaseScreen):
                         source=file_info.source
                     ))
             
-            # Build new MCP servers dict
+            # Build new MCP servers dict and collect trusted tools
             new_mcp_servers = {}
+            trusted_tools = []
+            
             for server_name in self.selected_servers:
                 if server_name in self.available_servers:
                     # Use the actual server config from registry
                     server_config = self.available_servers[server_name]
                     from ai_configurator.models.mcp_server import MCPServerConfig
+                    
+                    # Set auto_approve based on trust status
+                    auto_approve = ["*"] if server_name in self.trusted_servers else []
+                    
+                    # Add to trusted tools if trusted
+                    if server_name in self.trusted_servers:
+                        trusted_tools.append(f"@{server_name}/*")
+                    
                     new_mcp_servers[server_name] = MCPServerConfig(
                         command=server_config.get("command", server_name),
                         args=server_config.get("args", []),
                         env=server_config.get("env"),
                         timeout=server_config.get("timeout", 120000),
-                        disabled=server_config.get("disabled", False)
+                        disabled=server_config.get("disabled", False),
+                        auto_approve=auto_approve
                     )
                 elif server_name in self.agent.config.mcp_servers:
                     # Keep existing config
                     new_mcp_servers[server_name] = self.agent.config.mcp_servers[server_name]
+            
+            # Update allowed tools to include trusted MCP server tools
+            current_allowed_tools = list(self.agent.config.settings.allowed_tools)
+            # Remove existing MCP tool entries
+            current_allowed_tools = [tool for tool in current_allowed_tools if not tool.startswith("@")]
+            # Add trusted MCP tools
+            current_allowed_tools.extend(trusted_tools)
             
             # Create new config
             new_config = AgentConfig(
@@ -318,6 +377,9 @@ class AgentEditScreen(BaseScreen):
                 settings=self.agent.config.settings,
                 created_at=self.agent.config.created_at
             )
+            
+            # Update allowed tools in settings
+            new_config.settings.allowed_tools = current_allowed_tools
             
             updated_agent = Agent(config=new_config)
             

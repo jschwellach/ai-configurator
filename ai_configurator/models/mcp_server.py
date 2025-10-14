@@ -15,6 +15,10 @@ class MCPServerConfig(BaseModel):
     env: Optional[Dict[str, str]] = Field(default=None, description="Environment variables")
     timeout: int = Field(default=120000, description="Request timeout in milliseconds")
     disabled: bool = Field(default=False, description="Whether server is disabled")
+    auto_approve: List[str] = Field(default_factory=list, description="Auto-approved tools", alias="autoApprove")
+    
+    class Config:
+        populate_by_name = True
 
 
 class MCPServer(BaseModel):
