@@ -96,20 +96,51 @@ class AgentManagerScreen(BaseScreen):
     
     def action_new_agent(self) -> None:
         """Create new agent."""
-        from prompt_toolkit import prompt
+        from textual.widgets import Input
+        from textual.screen import ModalScreen
+        from textual.containers import Vertical, Horizontal
+        from textual.widgets import Button, Label
         
-        try:
-            name = prompt("Agent name: ")
-            if name:
-                agent = self.agent_service.create_agent(name, ToolType.Q_CLI)
-                if agent:
-                    self.show_notification(f"Created agent: {name}", "information")
-                    self.refresh_data()
-                else:
-                    self.show_notification(f"Agent '{name}' already exists", "warning")
-        except Exception as e:
-            logger.error(f"Error creating agent: {e}", exc_info=True)
-            self.show_notification(f"Error: {e}", "error")
+        class AgentNameInputScreen(ModalScreen):
+            """Agent name input screen."""
+            
+            def compose(self):
+                yield Vertical(
+                    Label("Enter agent name:"),
+                    Input(placeholder="my-agent", id="agent_name_input"),
+                    Horizontal(
+                        Button("Create", variant="primary", id="create_btn"),
+                        Button("Cancel", variant="default", id="cancel_btn"),
+                        classes="button_row"
+                    ),
+                    id="input_dialog"
+                )
+            
+            def on_input_submitted(self, event: Input.Submitted):
+                if event.input.id == "agent_name_input":
+                    self.dismiss(event.value)
+            
+            def on_button_pressed(self, event: Button.Pressed):
+                if event.button.id == "create_btn":
+                    name_input = self.query_one("#agent_name_input", Input)
+                    self.dismiss(name_input.value)
+                elif event.button.id == "cancel_btn":
+                    self.dismiss(None)
+        
+        def handle_agent_name(name: str):
+            if name and name.strip():
+                try:
+                    agent = self.agent_service.create_agent(name.strip(), ToolType.Q_CLI)
+                    if agent:
+                        self.show_notification(f"Created agent: {name.strip()}", "information")
+                        self.refresh_data()
+                    else:
+                        self.show_notification(f"Agent '{name.strip()}' already exists", "warning")
+                except Exception as e:
+                    logger.error(f"Error creating agent: {e}", exc_info=True)
+                    self.show_notification(f"Error: {e}", "error")
+        
+        self.app.push_screen(AgentNameInputScreen(), handle_agent_name)
     
     def action_edit_agent(self) -> None:
         """Edit selected agent."""
