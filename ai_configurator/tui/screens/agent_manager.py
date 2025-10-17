@@ -94,6 +94,10 @@ class AgentManagerScreen(BaseScreen):
         except Exception as e:
             logger.error(f"Error highlighting row: {e}", exc_info=True)
     
+    def on_data_table_row_selected(self, event: DataTable.RowSelected) -> None:
+        """Handle row selection (Enter key) - open edit."""
+        self.action_edit_agent()
+    
     def action_new_agent(self) -> None:
         """Create new agent."""
         from textual.widgets import Input

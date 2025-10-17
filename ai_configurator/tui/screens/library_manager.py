@@ -19,6 +19,7 @@ class LibraryManagerScreen(BaseScreen):
         Binding("n", "new_file", "New"),
         Binding("e", "edit_file", "Edit"),
         Binding("c", "clone_file", "Clone"),
+        Binding("o", "open_folder", "Open Folder"),
         Binding("s", "sync", "Sync"),
         Binding("d", "diff", "Diff"),
         Binding("r", "refresh", "Refresh"),
@@ -32,12 +33,13 @@ class LibraryManagerScreen(BaseScreen):
         self.sync_service = SyncService()
         self.selected_file = None
         self.personal_path = personal_path
+        self.library_root_path = personal_path.parent  # Store library root
     
     def compose(self) -> ComposeResult:
         """Build screen layout."""
         yield Header()
         yield Container(
-            Static("[bold cyan]Library Management[/bold cyan]\n[dim]n=New e=Edit c=Clone s=Sync d=Diff r=Refresh[/dim]", id="title"),
+            Static("[bold cyan]Library Management[/bold cyan]\n[dim]n=New e=Edit c=Clone o=Open Folder s=Sync d=Diff r=Refresh[/dim]", id="title"),
             Static(self.get_status_text(), id="status"),
             DataTable(id="file_table", classes="file-list"),
             id="library-container"
@@ -47,7 +49,7 @@ class LibraryManagerScreen(BaseScreen):
     def on_mount(self) -> None:
         """Initialize table and load data."""
         table = self.query_one(DataTable)
-        table.add_columns("File", "Source", "Size")
+        table.add_columns("File", "Path", "Size")
         table.cursor_type = "row"
         table.focus()
         self.refresh_data()
@@ -55,12 +57,11 @@ class LibraryManagerScreen(BaseScreen):
     def get_status_text(self) -> str:
         """Get library status."""
         try:
-            library = self.library_service.create_library()
-            base_count = sum(1 for f in library.files.values() if f.source.value == 'base')
-            personal_count = sum(1 for f in library.files.values() if f.source.value == 'personal')
+            # Count all .md files in library
+            total_files = len(list(self.library_root_path.rglob("*.md")))
             
             return f"""[bold]Library Status:[/bold]
-  Base Files: {base_count}  Personal Files: {personal_count}  Total: {len(library.files)}"""
+  Total Files: {total_files}  Location: {self.library_root_path}"""
         except Exception as e:
             logger.error(f"Error getting status: {e}", exc_info=True)
             return f"[yellow]Status unavailable: {e}[/yellow]"
@@ -76,29 +77,36 @@ class LibraryManagerScreen(BaseScreen):
         table.clear()
         
         try:
-            library = self.library_service.create_library()
+            # Scan entire library folder for all .md files
+            from collections import defaultdict
+            files_by_folder = defaultdict(list)
             
-            # Separate base and personal files
-            base_files = [(k, f) for k, f in library.files.items() if f.source.value == 'base']
-            personal_files = [(k, f) for k, f in library.files.items() if f.source.value == 'personal']
+            for md_file in self.library_root_path.rglob("*.md"):
+                if md_file.is_file():
+                    # Get folder path relative to library root
+                    relative_path = md_file.relative_to(self.library_root_path)
+                    folder = str(relative_path.parent)
+                    
+                    files_by_folder[folder].append({
+                        'name': md_file.name,
+                        'path': str(relative_path),
+                        'size': md_file.stat().st_size
+                    })
             
-            # Add base files
-            for file_key, file_info in sorted(base_files, key=lambda x: x[1].path):
-                filename = file_info.path
-                source = file_info.source.value
-                size = f"{file_info.size} bytes" if file_info.size > 0 else "-"
-                table.add_row(filename, source, size)
-            
-            # Add separator if both exist
-            if base_files and personal_files:
-                table.add_row("─" * 40, "─" * 10, "─" * 10)
-            
-            # Add personal files
-            for file_key, file_info in sorted(personal_files, key=lambda x: x[1].path):
-                filename = file_info.path
-                source = file_info.source.value
-                size = f"{file_info.size} bytes" if file_info.size > 0 else "-"
-                table.add_row(filename, source, size)
+            # Sort folders and display
+            for folder in sorted(files_by_folder.keys()):
+                # Add folder header
+                table.add_row(f"[bold cyan]{folder}/[/bold cyan]", "", "")
+                
+                # Add files in this folder
+                for file_info in sorted(files_by_folder[folder], key=lambda x: x['name']):
+                    filename = file_info['name']
+                    full_path = file_info['path']
+                    size = f"{file_info['size']} bytes" if file_info['size'] > 0 else "-"
+                    table.add_row(f"  {filename}", full_path, size)
+                
+                # Add separator between folders
+                table.add_row("", "", "")
                 
         except Exception as e:
             logger.error(f"Error loading files: {e}", exc_info=True)
@@ -170,63 +178,95 @@ class LibraryManagerScreen(BaseScreen):
             table = self.query_one(DataTable)
             if event.cursor_row < table.row_count:
                 row = table.get_row_at(event.cursor_row)
-                filename = str(row[0])
-                # Skip separator row
-                if not filename.startswith("─"):
-                    self.selected_file = filename
+                filename = str(row[0]).strip()
+                full_path = str(row[1]).strip()
+                
+                # Skip folder headers (bold cyan), empty rows, and indented filenames
+                if full_path and not filename.startswith("[bold"):
+                    self.selected_file = full_path
         except Exception as e:
             logger.error(f"Error highlighting row: {e}", exc_info=True)
     
     def action_new_file(self) -> None:
         """Create new file in personal library."""
-        import subprocess
-        import os
-        import shutil
-        from pathlib import Path
+        from textual.widgets import Input, Button, Label
+        from textual.screen import ModalScreen
+        from textual.containers import Vertical, Horizontal
         
-        try:
-            # Prompt for filename
-            from prompt_toolkit import prompt
-            filename = prompt("Filename (e.g., my-rules.md): ")
+        class FileNameInputScreen(ModalScreen):
+            """Filename input screen."""
             
-            if not filename:
+            def compose(self):
+                yield Vertical(
+                    Label("Enter filename:"),
+                    Input(placeholder="my-rules.md", id="filename_input"),
+                    Horizontal(
+                        Button("Create", variant="primary", id="create_btn"),
+                        Button("Cancel", variant="default", id="cancel_btn"),
+                        classes="button_row"
+                    ),
+                    id="input_dialog"
+                )
+            
+            def on_input_submitted(self, event: Input.Submitted):
+                if event.input.id == "filename_input":
+                    self.dismiss(event.value)
+            
+            def on_button_pressed(self, event: Button.Pressed):
+                if event.button.id == "create_btn":
+                    filename_input = self.query_one("#filename_input", Input)
+                    self.dismiss(filename_input.value)
+                elif event.button.id == "cancel_btn":
+                    self.dismiss(None)
+        
+        def handle_filename(filename: str):
+            if not filename or not filename.strip():
                 return
             
-            # Ensure .md extension
-            if not filename.endswith('.md'):
-                filename += '.md'
+            import subprocess
+            import os
+            import shutil
             
-            # Create in personal library
-            file_path = self.personal_path / filename
-            
-            if file_path.exists():
-                self.show_notification(f"File already exists: {filename}", "warning")
-                return
-            
-            # Create with template
-            file_path.write_text(f"# {filename.replace('.md', '').replace('-', ' ').title()}\n\n")
-            
-            # Open in editor
-            editor = os.environ.get('EDITOR')
-            if not editor:
-                # Try common editors
-                for e in ['kate', 'vim', 'vi', 'nano']:
-                    if shutil.which(e):
-                        editor = e
-                        break
-            
-            if not editor:
-                self.show_notification("No editor found. Set $EDITOR environment variable.", "error")
-                return
-            
-            subprocess.run([editor, str(file_path)])
-            
-            self.show_notification(f"Created: {filename}", "information")
-            self.refresh_data()
-            
-        except Exception as e:
-            logger.error(f"Error creating file: {e}", exc_info=True)
-            self.show_notification(f"Error: {e}", "error")
+            try:
+                filename = filename.strip()
+                
+                # Ensure .md extension
+                if not filename.endswith('.md'):
+                    filename += '.md'
+                
+                # Create in personal library
+                file_path = self.personal_path / filename
+                
+                if file_path.exists():
+                    self.show_notification(f"File already exists: {filename}", "warning")
+                    return
+                
+                # Create with template
+                file_path.write_text(f"# {filename.replace('.md', '').replace('-', ' ').title()}\n\n")
+                
+                # Open in editor
+                editor = os.environ.get('EDITOR')
+                if not editor:
+                    # Try common editors
+                    for e in ['kate', 'vim', 'vi', 'nano']:
+                        if shutil.which(e):
+                            editor = e
+                            break
+                
+                if not editor:
+                    self.show_notification("No editor found. Set $EDITOR environment variable.", "error")
+                    return
+                
+                subprocess.run([editor, str(file_path)])
+                
+                self.show_notification(f"Created: {filename}", "information")
+                self.refresh_data()
+                
+            except Exception as e:
+                logger.error(f"Error creating file: {e}", exc_info=True)
+                self.show_notification(f"Error: {e}", "error")
+        
+        self.app.push_screen(FileNameInputScreen(), handle_filename)
     
     def action_edit_file(self) -> None:
         """Edit selected file."""
@@ -238,49 +278,17 @@ class LibraryManagerScreen(BaseScreen):
             self.show_notification("No file selected", "warning")
             return
         
-        # Skip separator row
-        if self.selected_file.startswith("─"):
-            return
-        
         try:
-            # Find the file - prefer personal over base
-            library = self.library_service.create_library()
-            file_info = None
-            
-            logger.info(f"Editing file: {self.selected_file}")
-            
-            # First look for personal version
-            for f in library.files.values():
-                if f.path == self.selected_file and f.source.value == 'personal':
-                    file_info = f
-                    break
-            
-            # If not found, look for base version
-            if not file_info:
-                for f in library.files.values():
-                    if f.path == self.selected_file and f.source.value == 'base':
-                        file_info = f
-                        break
-            
-            if not file_info:
-                self.show_notification(f"File not found: {self.selected_file}", "error")
-                logger.error(f"File not found in library: {self.selected_file}")
-                return
-            
-            logger.info(f"Found file: {file_info.path}, source: {file_info.source.value}")
-            
-            # Determine full path
-            if file_info.source.value == 'personal':
-                file_path = self.personal_path / file_info.path
-                logger.info(f"Opening personal file: {file_path}")
-            else:
-                # Base file - suggest cloning
-                self.show_notification("Base file - press 'c' to clone to personal first", "warning")
-                return
+            # Build full path from library root
+            file_path = self.library_root_path / self.selected_file
             
             if not file_path.exists():
-                self.show_notification(f"File does not exist: {file_path}", "error")
-                logger.error(f"File does not exist: {file_path}")
+                self.show_notification(f"File does not exist: {self.selected_file}", "error")
+                return
+            
+            # Check if it's in personal folder - only allow editing personal files
+            if not str(file_path).startswith(str(self.personal_path)):
+                self.show_notification("Can only edit personal files - press 'c' to clone first", "warning")
                 return
             
             # Open in editor
@@ -297,9 +305,7 @@ class LibraryManagerScreen(BaseScreen):
                 return
             
             logger.info(f"Opening editor: {editor} {file_path}")
-            # Suspend TUI and run editor
-            with self.app.suspend():
-                subprocess.run([editor, str(file_path)])
+            subprocess.run([editor, str(file_path)])
             
             self.show_notification(f"Edited: {self.selected_file}", "information")
             self.refresh_data()
@@ -311,40 +317,31 @@ class LibraryManagerScreen(BaseScreen):
     def action_clone_file(self) -> None:
         """Clone selected file to personal library."""
         import shutil
+        from pathlib import Path
         
         if not self.selected_file:
             self.show_notification("No file selected", "warning")
             return
         
-        # Skip separator row
-        if self.selected_file.startswith("─"):
-            return
-        
         try:
-            # Find the file
-            library = self.library_service.create_library()
-            file_info = None
-            source_path = None
+            # Build source path from library root
+            source_path = self.library_root_path / self.selected_file
             
-            for key, f in library.files.items():
-                if f.path == self.selected_file:
-                    file_info = f
-                    # Use the key to construct full path
-                    if f.source.value == 'base':
-                        source_path = library.base_path / key.replace('base/', '', 1)
-                    else:
-                        source_path = self.personal_path / key.replace('personal/', '', 1)
-                    break
-            
-            if not file_info or not source_path:
+            if not source_path.exists():
                 self.show_notification(f"File not found: {self.selected_file}", "error")
                 return
             
-            # Target path in personal library
-            target_path = self.personal_path / file_info.path
+            # Check if already in personal
+            if str(source_path).startswith(str(self.personal_path)):
+                self.show_notification("File is already in personal library", "warning")
+                return
+            
+            # Target path - preserve relative structure within personal
+            relative_to_base = Path(self.selected_file).relative_to(Path(self.selected_file).parts[0])
+            target_path = self.personal_path / relative_to_base
             
             if target_path.exists():
-                self.show_notification(f"Already exists in personal: {self.selected_file}", "warning")
+                self.show_notification(f"Already exists in personal: {relative_to_base}", "warning")
                 return
             
             # Create parent directories if needed
@@ -353,9 +350,34 @@ class LibraryManagerScreen(BaseScreen):
             # Copy file
             shutil.copy2(source_path, target_path)
             
-            self.show_notification(f"Cloned to personal: {self.selected_file}", "information")
+            self.show_notification(f"Cloned to personal: {relative_to_base}", "information")
             self.refresh_data()
             
         except Exception as e:
             logger.error(f"Error cloning file: {e}", exc_info=True)
+            self.show_notification(f"Error: {e}", "error")
+
+    
+    def action_open_folder(self) -> None:
+        """Open library folder in system file manager."""
+        import subprocess
+        import platform
+        
+        try:
+            system = platform.system()
+            
+            if system == "Linux":
+                subprocess.Popen(["xdg-open", str(self.library_root_path)])
+            elif system == "Darwin":  # macOS
+                subprocess.Popen(["open", str(self.library_root_path)])
+            elif system == "Windows":
+                subprocess.Popen(["explorer", str(self.library_root_path)])
+            else:
+                self.show_notification(f"Unsupported platform: {system}", "error")
+                return
+            
+            self.show_notification(f"Opening: {self.library_root_path}", "information")
+            
+        except Exception as e:
+            logger.error(f"Error opening folder: {e}", exc_info=True)
             self.show_notification(f"Error: {e}", "error")

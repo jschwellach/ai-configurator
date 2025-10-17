@@ -2,7 +2,8 @@
 import logging
 from textual.app import ComposeResult
 from textual.containers import Container, Horizontal, Vertical
-from textual.widgets import Header, Footer, Static, DataTable, Label, Input
+from textual.widgets import Header, Footer, Static, DataTable, Label, Input, SelectionList
+from textual.widgets.selection_list import Selection
 from textual.binding import Binding
 
 from ai_configurator.tui.screens.base import BaseScreen
@@ -19,7 +20,7 @@ class AgentEditScreen(BaseScreen):
     
     BINDINGS = [
         Binding("ctrl+s", "save", "Save"),
-        Binding("space", "toggle_select", "Select/Deselect"),
+        Binding("space", "toggle_checkbox", "Toggle"),
         Binding("t", "toggle_trust", "Trust/Untrust"),
         Binding("a", "add_pattern", "Add Pattern"),
         Binding("d", "remove_pattern", "Delete Pattern"),
@@ -37,10 +38,14 @@ class AgentEditScreen(BaseScreen):
         base_path, personal_path = get_library_paths()
         self.library_service = LibraryService(base_path, personal_path)
         self.registry_service = RegistryService(get_registry_dir())
+        self.library_root_path = personal_path.parent
         
-        # Load available items
-        library = self.library_service.create_library()
-        self.available_files = {f.path: f for f in library.files.values()}
+        # Load available files - scan entire library folder
+        self.available_files = {}
+        for md_file in self.library_root_path.rglob("*.md"):
+            if md_file.is_file():
+                relative_path = str(md_file.relative_to(self.library_root_path))
+                self.available_files[relative_path] = relative_path
         
         # Load MCP servers
         import json
@@ -64,7 +69,21 @@ class AgentEditScreen(BaseScreen):
                     logger.error(f"Error loading {server_file}: {e}")
         
         # Pre-select items already in agent
-        self.selected_files = set(r.path for r in agent.config.resources if r.path in self.available_files)
+        # Match both old format (templates/file.md) and new format (base/templates/file.md)
+        self.selected_files = set()
+        for resource in agent.config.resources:
+            # Try exact match first
+            if resource.path in self.available_files:
+                self.selected_files.add(resource.path)
+            else:
+                # Try matching by filename in any folder
+                from pathlib import Path
+                resource_name = Path(resource.path).name
+                for available_path in self.available_files.keys():
+                    if Path(available_path).name == resource_name:
+                        self.selected_files.add(available_path)
+                        break
+        
         self.selected_servers = set(name for name in agent.config.mcp_servers.keys() if name in self.available_servers)
         
         # Track trusted servers (those with autoApprove tools)
@@ -78,150 +97,306 @@ class AgentEditScreen(BaseScreen):
     
     def compose(self) -> ComposeResult:
         """Build layout."""
+        from textual.containers import VerticalScroll
+        
         yield Header()
         yield Container(
-            Static(f"[bold cyan]Edit Agent: {self.agent.name}[/bold cyan]\n[dim]Space=Select T=Trust Ctrl+S=Save A=Add D=Delete E=Edit Esc=Cancel[/dim]", id="title"),
+            Static(f"[bold cyan]Edit Agent: {self.agent.name}[/bold cyan]\n[dim]Click to select/trust | T=Trust Ctrl+S=Save A=Add D=Delete E=Edit Esc=Cancel[/dim]", id="title"),
             
             # Context patterns section
             Vertical(
                 Label("[bold]Context File Patterns[/bold]"),
-                DataTable(id="patterns_table", classes="patterns-table"),
+                VerticalScroll(
+                    DataTable(id="patterns_table", classes="patterns-table"),
+                    classes="scroll-container",
+                    can_focus=False
+                ),
                 classes="patterns-section"
             ),
             
-            Horizontal(
-                # Left pane: Available items
-                Vertical(
-                    Label("[bold]Available Library Files[/bold]"),
-                    DataTable(id="available_files", classes="left-pane-top"),
-                    Label("[bold]Available MCP Servers[/bold]"),
-                    DataTable(id="available_servers", classes="left-pane-bottom"),
-                    classes="left-pane"
+            # Library files section
+            Vertical(
+                Label("[bold]Library Files[/bold]"),
+                VerticalScroll(
+                    DataTable(id="available_files", classes="files-table"),
+                    classes="scroll-container",
+                    can_focus=False
                 ),
-                # Right pane: Current agent config
-                Vertical(
-                    Label("[bold]Agent Resources[/bold]"),
-                    DataTable(id="selected_files", classes="right-pane-top"),
-                    Label("[bold]Agent MCP Servers[/bold]"),
-                    DataTable(id="selected_servers", classes="right-pane-bottom"),
-                    classes="right-pane"
-                ),
-                id="dual-pane"
+                classes="files-section"
             ),
+            
+            # MCP servers section
+            Vertical(
+                Label("[bold]MCP Servers[/bold]"),
+                VerticalScroll(
+                    DataTable(id="available_servers", classes="servers-table"),
+                    classes="scroll-container",
+                    can_focus=False
+                ),
+                classes="servers-section"
+            ),
+            
             id="edit-container"
         )
         yield Footer()
     
     def on_mount(self) -> None:
-        """Initialize tables and input."""
+        """Initialize widgets."""
         # Setup patterns table
         patterns_table = self.query_one("#patterns_table", DataTable)
         patterns_table.add_column("Pattern")
         patterns_table.cursor_type = "row"
+        patterns_table.can_focus = True
         
-        # Setup other tables
-        avail_files = self.query_one("#available_files", DataTable)
-        avail_files.add_column("File")
-        avail_files.cursor_type = "row"
+        # Setup files table with selection column
+        files_table = self.query_one("#available_files", DataTable)
+        files_table.add_column("Selected", width=10)
+        files_table.add_column("File", width=60)
+        files_table.cursor_type = "cell"
+        files_table.zebra_stripes = True
+        files_table.show_cursor = True
+        files_table.can_focus = True
         
-        avail_servers = self.query_one("#available_servers", DataTable)
-        avail_servers.add_column("Server")
-        avail_servers.cursor_type = "row"
-        
-        sel_files = self.query_one("#selected_files", DataTable)
-        sel_files.add_column("File")
-        sel_files.cursor_type = "row"
-        sel_files.can_focus = False  # Disable focus on read-only panel
-        
-        sel_servers = self.query_one("#selected_servers", DataTable)
-        sel_servers.add_column("Server")
-        sel_servers.cursor_type = "row"
-        sel_servers.can_focus = False  # Disable focus on read-only panel
+        # Setup servers table with selection and trust columns
+        servers_table = self.query_one("#available_servers", DataTable)
+        servers_table.add_column("Selected", width=10)
+        servers_table.add_column("Trusted", width=10)
+        servers_table.add_column("Server", width=40)
+        servers_table.cursor_type = "cell"
+        servers_table.zebra_stripes = True
+        servers_table.show_cursor = True
+        servers_table.can_focus = True
         
         self.refresh_all_tables()
         patterns_table.focus()
     
     def refresh_all_tables(self) -> None:
-        """Refresh all tables."""
+        """Refresh all widgets."""
+        from pathlib import Path
+        from collections import defaultdict
+        
         # Patterns table
         patterns_table = self.query_one("#patterns_table", DataTable)
         patterns_table.clear()
         for pattern in self.context_patterns:
             patterns_table.add_row(pattern)
         
-        # Available files
-        avail_files = self.query_one("#available_files", DataTable)
-        avail_files.clear()
-        for path, f in sorted(self.available_files.items()):
-            checkbox = "[X]" if path in self.selected_files else "[ ]"
-            avail_files.add_row(f"{checkbox} {path}")
+        # Available files - populate DataTable with selection column
+        files_table = self.query_one("#available_files", DataTable)
+        files_table.clear()
         
-        # Available servers
-        avail_servers = self.query_one("#available_servers", DataTable)
-        avail_servers.clear()
+        # Group by folder
+        files_by_folder = defaultdict(list)
+        for path in self.available_files.keys():
+            folder = str(Path(path).parent)
+            files_by_folder[folder].append(path)
+        
+        # Add files grouped by folder
+        for folder in sorted(files_by_folder.keys()):
+            # Add folder header
+            files_table.add_row("", f"[bold cyan]{folder}/[/bold cyan]")
+            
+            # Add files in this folder
+            for path in sorted(files_by_folder[folder]):
+                selected_mark = "[green]✓[/green]" if path in self.selected_files else "[dim]○[/dim]"
+                filename = Path(path).name
+                files_table.add_row(selected_mark, f"  {filename}")
+        
+        # Available servers - populate DataTable with selection and trust columns
+        servers_table = self.query_one("#available_servers", DataTable)
+        servers_table.clear()
         for name in sorted(self.available_servers.keys()):
-            checkbox = "[X]" if name in self.selected_servers else "[ ]"
-            trusted_text = " (trusted)" if name in self.trusted_servers else ""
-            avail_servers.add_row(f"{checkbox} {name}{trusted_text}")
-        
-        # Selected files
-        sel_files = self.query_one("#selected_files", DataTable)
-        sel_files.clear()
-        for resource in self.agent.config.resources:
-            sel_files.add_row(resource.path)
-        
-        # Selected servers
-        sel_servers = self.query_one("#selected_servers", DataTable)
-        sel_servers.clear()
-        for name in sorted(self.agent.config.mcp_servers.keys()):
-            sel_servers.add_row(name)
+            selected_mark = "[green]✓[/green]" if name in self.selected_servers else "[dim]○[/dim]"
+            trusted_mark = "[yellow]★[/yellow]" if name in self.trusted_servers else "[dim]○[/dim]"
+            servers_table.add_row(selected_mark, trusted_mark, name)
     
-    def action_toggle_select(self) -> None:
-        """Toggle selection of item in left pane."""
+    def on_data_table_cell_selected(self, event: DataTable.CellSelected) -> None:
+        """Handle cell selection - toggle based on which column is clicked."""
+        from pathlib import Path
+        
+        try:
+            if event.data_table.id == "available_files":
+                # If clicking on file name column, move cursor to checkbox column
+                if event.coordinate.column != 0:
+                    event.data_table.move_cursor(
+                        row=event.coordinate.row,
+                        column=0
+                    )
+                    return
+                
+                row = event.data_table.get_row_at(event.coordinate.row)
+                file_display = str(row[1]).strip()
+                
+                # Skip folder headers
+                if file_display.startswith("[bold"):
+                    return
+                
+                # Extract filename and find full path
+                filename = file_display.strip()
+                
+                # Find current folder by looking backwards
+                current_folder = None
+                for i in range(event.coordinate.row - 1, -1, -1):
+                    check_row = event.data_table.get_row_at(i)
+                    check_text = str(check_row[1]).strip()
+                    if check_text.startswith("[bold cyan]"):
+                        current_folder = check_text.replace("[bold cyan]", "").replace("[/bold cyan]", "").rstrip("/")
+                        break
+                
+                if current_folder:
+                    full_path = f"{current_folder}/{filename}"
+                    
+                    # Toggle selection
+                    if full_path in self.selected_files:
+                        self.selected_files.discard(full_path)
+                    else:
+                        self.selected_files.add(full_path)
+                    
+                    # Refresh and restore cursor to checkbox column
+                    cursor_row = event.coordinate.row
+                    self.refresh_all_tables()
+                    event.data_table.focus()
+                    if event.data_table.row_count > 0:
+                        event.data_table.move_cursor(
+                            row=min(cursor_row, event.data_table.row_count - 1),
+                            column=0
+                        )
+            
+            elif event.data_table.id == "available_servers":
+                row = event.data_table.get_row_at(event.coordinate.row)
+                server_name = str(row[2])  # Server name is now in column 2
+                
+                # Column 0 = Selected, Column 1 = Trusted, Column 2 = Name
+                if event.coordinate.column == 0:
+                    # Toggle selection
+                    if server_name in self.selected_servers:
+                        self.selected_servers.discard(server_name)
+                    else:
+                        self.selected_servers.add(server_name)
+                    
+                    # Refresh and restore cursor
+                    cursor_row = event.coordinate.row
+                    self.refresh_all_tables()
+                    event.data_table.focus()
+                    if event.data_table.row_count > 0:
+                        event.data_table.move_cursor(
+                            row=min(cursor_row, event.data_table.row_count - 1),
+                            column=0
+                        )
+                    
+                elif event.coordinate.column == 1:
+                    # Toggle trust
+                    if server_name in self.trusted_servers:
+                        self.trusted_servers.discard(server_name)
+                    else:
+                        self.trusted_servers.add(server_name)
+                    
+                    # Refresh and restore cursor
+                    cursor_row = event.coordinate.row
+                    self.refresh_all_tables()
+                    event.data_table.focus()
+                    if event.data_table.row_count > 0:
+                        event.data_table.move_cursor(
+                            row=min(cursor_row, event.data_table.row_count - 1),
+                            column=1
+                        )
+                else:
+                    # Column 2 (server name) - move cursor to checkbox column
+                    event.data_table.move_cursor(
+                        row=event.coordinate.row,
+                        column=0
+                    )
+                        
+        except Exception as e:
+            logger.error(f"Error handling cell click: {e}", exc_info=True)
+    
+    def action_toggle_checkbox(self) -> None:
+        """Toggle checkbox at current cursor position (Space key)."""
+        from pathlib import Path
+        
         focused = self.app.focused
         if focused is None:
             return
         
-        table_id = focused.id
-        cursor_row = focused.cursor_row
-        
         try:
-            if table_id == "available_files":
-                table = self.query_one("#available_files", DataTable)
-                if table.cursor_row < table.row_count:
-                    row = table.get_row_at(table.cursor_row)
-                    path = str(row[0])[4:]  # Skip "[ ] " or "[X] "
+            if focused.id == "available_files":
+                files_table = self.query_one("#available_files", DataTable)
+                cursor_row = files_table.cursor_row
+                cursor_col = files_table.cursor_column
+                
+                # Only toggle if on checkbox column (0)
+                if cursor_col != 0:
+                    return
+                
+                row = files_table.get_row_at(cursor_row)
+                file_display = str(row[1]).strip()
+                
+                # Skip folder headers
+                if file_display.startswith("[bold"):
+                    return
+                
+                # Find full path
+                filename = file_display.strip()
+                current_folder = None
+                for i in range(cursor_row - 1, -1, -1):
+                    check_row = files_table.get_row_at(i)
+                    check_text = str(check_row[1]).strip()
+                    if check_text.startswith("[bold cyan]"):
+                        current_folder = check_text.replace("[bold cyan]", "").replace("[/bold cyan]", "").rstrip("/")
+                        break
+                
+                if current_folder:
+                    full_path = f"{current_folder}/{filename}"
                     
-                    if path in self.selected_files:
-                        self.selected_files.discard(path)
+                    # Toggle selection
+                    if full_path in self.selected_files:
+                        self.selected_files.discard(full_path)
                     else:
-                        self.selected_files.add(path)
+                        self.selected_files.add(full_path)
                     
+                    # Refresh and restore cursor
                     self.refresh_all_tables()
-                    table.focus()
-                    if table.row_count > 0:
-                        table.move_cursor(row=min(cursor_row, table.row_count - 1))
+                    files_table.focus()
+                    if files_table.row_count > 0:
+                        files_table.move_cursor(row=min(cursor_row, files_table.row_count - 1), column=0)
             
-            elif table_id == "available_servers":
-                table = self.query_one("#available_servers", DataTable)
-                if table.cursor_row < table.row_count:
-                    row = table.get_row_at(table.cursor_row)
-                    # Extract name, handling "(trusted)" suffix
-                    full_text = str(row[0])[4:]  # Skip "[ ] " or "[X] "
-                    name = full_text.split(" (trusted)")[0]  # Remove "(trusted)" if present
-                    
-                    if name in self.selected_servers:
-                        self.selected_servers.discard(name)
+            elif focused.id == "available_servers":
+                servers_table = self.query_one("#available_servers", DataTable)
+                cursor_row = servers_table.cursor_row
+                cursor_col = servers_table.cursor_column
+                
+                row = servers_table.get_row_at(cursor_row)
+                server_name = str(row[2])
+                
+                # Column 0 = Selected, Column 1 = Trusted
+                if cursor_col == 0:
+                    # Toggle selection
+                    if server_name in self.selected_servers:
+                        self.selected_servers.discard(server_name)
                     else:
-                        self.selected_servers.add(name)
+                        self.selected_servers.add(server_name)
                     
+                    # Refresh and restore cursor
                     self.refresh_all_tables()
-                    table.focus()
-                    if table.row_count > 0:
-                        table.move_cursor(row=min(cursor_row, table.row_count - 1))
+                    servers_table.focus()
+                    if servers_table.row_count > 0:
+                        servers_table.move_cursor(row=min(cursor_row, servers_table.row_count - 1), column=0)
+                
+                elif cursor_col == 1:
+                    # Toggle trust
+                    if server_name in self.trusted_servers:
+                        self.trusted_servers.discard(server_name)
+                    else:
+                        self.trusted_servers.add(server_name)
                     
+                    # Refresh and restore cursor
+                    self.refresh_all_tables()
+                    servers_table.focus()
+                    if servers_table.row_count > 0:
+                        servers_table.move_cursor(row=min(cursor_row, servers_table.row_count - 1), column=1)
+                        
         except Exception as e:
-            logger.error(f"Error toggling selection: {e}", exc_info=True)
+            logger.error(f"Error toggling checkbox: {e}", exc_info=True)
     
     def action_toggle_trust(self) -> None:
         """Toggle trust status of selected MCP server."""
@@ -229,28 +404,29 @@ class AgentEditScreen(BaseScreen):
         if focused is None or focused.id != "available_servers":
             return
         
-        table = self.query_one("#available_servers", DataTable)
-        if table.cursor_row < table.row_count:
-            try:
-                cursor_row = table.cursor_row  # Save cursor position
-                row = table.get_row_at(table.cursor_row)
-                # Extract name, handling "(trusted)" suffix
-                full_text = str(row[0])[4:]  # Skip "[ ] " or "[X] "
-                name = full_text.split(" (trusted)")[0]  # Remove "(trusted)" if present
+        try:
+            servers_table = self.query_one("#available_servers", DataTable)
+            if servers_table.cursor_row < servers_table.row_count:
+                cursor_row = servers_table.cursor_row
+                row = servers_table.get_row_at(cursor_row)
+                server_name = str(row[1])  # Server name is in second column
                 
-                if name in self.trusted_servers:
-                    self.trusted_servers.discard(name)
+                # Toggle trust
+                if server_name in self.trusted_servers:
+                    self.trusted_servers.discard(server_name)
                 else:
-                    self.trusted_servers.add(name)
+                    self.trusted_servers.add(server_name)
                 
+                # Refresh to update trust indicator
                 self.refresh_all_tables()
-                table.focus()
-                # Restore cursor position
-                if table.row_count > 0:
-                    table.move_cursor(row=min(cursor_row, table.row_count - 1))
                 
-            except Exception as e:
-                logger.error(f"Error toggling trust: {e}", exc_info=True)
+                # Restore cursor and focus
+                servers_table.focus()
+                if servers_table.row_count > 0:
+                    servers_table.move_cursor(row=min(cursor_row, servers_table.row_count - 1))
+                
+        except Exception as e:
+            logger.error(f"Error toggling trust: {e}", exc_info=True)
     
     def action_add_pattern(self) -> None:
         """Add a new context pattern."""
@@ -323,10 +499,13 @@ class AgentEditScreen(BaseScreen):
             new_resources = []
             for path in self.selected_files:
                 if path in self.available_files:
-                    file_info = self.available_files[path]
+                    # Determine source from path (base/ or personal/)
+                    from ai_configurator.models import LibrarySource
+                    source = LibrarySource.BASE if path.startswith("base/") else LibrarySource.PERSONAL
+                    
                     new_resources.append(ResourcePath(
                         path=path,
-                        source=file_info.source
+                        source=source
                     ))
             
             # Build new MCP servers dict and collect trusted tools

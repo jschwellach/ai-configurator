@@ -1,7 +1,8 @@
 """Main menu screen for AI Agent Manager TUI."""
 from textual.app import ComposeResult
 from textual.containers import Container, Vertical
-from textual.widgets import Header, Footer, Static, Button
+from textual.widgets import Header, Footer, Static, OptionList
+from textual.widgets.option_list import Option
 from textual.binding import Binding
 
 from ai_configurator.version import __title__
@@ -19,6 +20,7 @@ class MainMenuScreen(BaseScreen):
         Binding("2", "library", "Library"),
         Binding("3", "mcp", "MCP Servers"),
         Binding("4", "settings", "Settings"),
+        Binding("escape", "quit", "Quit"),
     ]
     
     def compose(self) -> ComposeResult:
@@ -28,13 +30,16 @@ class MainMenuScreen(BaseScreen):
             Static(f"[bold cyan]{__title__}[/bold cyan]\n", id="title"),
             Static(self.get_status_text(), id="status"),
             Vertical(
-                Button("1. Agent Management", id="agents", variant="primary"),
-                Button("2. Library Management", id="library", variant="primary"),
-                Button("3. MCP Servers", id="mcp", variant="primary"),
-                Button("4. Settings", id="settings"),
-                id="menu"
+                OptionList(
+                    Option("Agent Management", id="agents"),
+                    Option("Library Management", id="library"),
+                    Option("MCP Servers", id="mcp"),
+                    Option("Settings", id="settings"),
+                    id="menu"
+                ),
+                id="menu-container"
             ),
-            Static("\n[dim]Press Tab to navigate, Enter to select, or use number keys 1-4[/dim]", id="help"),
+            Static("\n[dim]Use arrow keys to navigate, Enter to select, or use number keys 1-4[/dim]", id="help"),
             id="main-container"
         )
         yield Footer()
@@ -69,17 +74,17 @@ class MainMenuScreen(BaseScreen):
         status_widget = self.query_one("#status", Static)
         status_widget.update(self.get_status_text())
     
-    def on_button_pressed(self, event: Button.Pressed) -> None:
-        """Handle button press."""
-        button_id = event.button.id
+    def on_option_list_option_selected(self, event: OptionList.OptionSelected) -> None:
+        """Handle menu selection."""
+        option_id = event.option.id
         
-        if button_id == "agents":
+        if option_id == "agents":
             self.action_agents()
-        elif button_id == "library":
+        elif option_id == "library":
             self.action_library()
-        elif button_id == "mcp":
+        elif option_id == "mcp":
             self.action_mcp()
-        elif button_id == "settings":
+        elif option_id == "settings":
             self.action_settings()
     
     def action_agents(self) -> None:
@@ -101,3 +106,7 @@ class MainMenuScreen(BaseScreen):
         """Navigate to settings."""
         from ai_configurator.tui.screens.settings import SettingsScreen
         self.app.push_screen(SettingsScreen())
+    
+    def action_quit(self) -> None:
+        """Quit the application."""
+        self.app.exit()

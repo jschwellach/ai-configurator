@@ -1,6 +1,5 @@
 # AI Agent Manager - System Knowledge Base
 
-VERSION: 0.2.7 (Beta)
 PURPOSE: LLM-optimized system knowledge for AI agents
 AUDIENCE: AI assistants, not humans
 
@@ -9,6 +8,7 @@ AUDIENCE: AI assistants, not humans
 ## SYSTEM_CORE
 
 ### Architecture
+
 ```yaml
 type: tool-agnostic_knowledge_library_manager
 paradigm: pure_knowledge_library + tool_specific_agents
@@ -16,6 +16,7 @@ separation: knowledge(tool-agnostic) | agents(tool-specific)
 ```
 
 ### Directory Structure
+
 ```
 ~/.config/ai-configurator/
   library/              # synced knowledge base (tool-agnostic markdown)
@@ -36,6 +37,7 @@ separation: knowledge(tool-agnostic) | agents(tool-specific)
 ```
 
 ### Core Components
+
 ```yaml
 LibraryManager:
   purpose: manage tool-agnostic knowledge base
@@ -55,18 +57,19 @@ MCPManager:
 ```
 
 ### Data Models
+
 ```yaml
 Agent:
   name: string
   tool: enum[q-cli, claude, chatgpt]
-  resources: list[file_path]  # references to library files
+  resources: list[file_path] # references to library files
   mcp_servers: dict[server_name, config]
-  
+
 LibraryFile:
   category: enum[base, personal]
   type: enum[role, domain, tool, workflow, common]
   path: relative_path
-  
+
 MCPServer:
   name: string
   command: string
@@ -76,16 +79,17 @@ MCPServer:
 ```
 
 ### State Evolution
+
 ```yaml
 v0.1.0:
   - initial: global contexts + profiles
   - problem: tied to Q CLI, not reusable
-  
+
 v0.2.0:
   - migration: global→agent-based architecture
   - change: removed global_context.json
   - change: agents use resources field
-  
+
 v0.2.7:
   - current: tool-agnostic library + dual-pane TUI
   - feature: base/personal library separation
@@ -94,6 +98,7 @@ v0.2.7:
 ```
 
 ### Key Principles
+
 ```yaml
 tool_agnostic: knowledge works with any AI tool
 file_references: agents reference, not embed
@@ -107,6 +112,7 @@ auto_export: changes sync to Q CLI automatically
 ## OPERATIONS
 
 ### Command Pattern
+
 ```
 ai-config [mode] [resource] [action] [options]
 
@@ -116,68 +122,72 @@ actions: context-dependent
 ```
 
 ### Agent Operations
+
 ```yaml
 create:
   pattern: agent create <name> --tool <tool>
   effect: creates agent JSON + exports to tool
-  
+
 edit:
   pattern: agent edit <name>
   interface: dual-pane TUI (resources left, current right)
   interaction: space=toggle, ctrl+s=save
-  
+
 list:
   pattern: agent list
   output: all agents with tool type
-  
+
 export:
   pattern: agent export <name>
   targets: [~/.aws/amazonq/cli-agents/]
 ```
 
 ### Library Operations
+
 ```yaml
 sync:
   pattern: library sync
   logic: base→personal with conflict detection
   conflicts: [keep_local, accept_remote, manual_merge]
   backup: automatic before changes
-  
+
 clone:
   pattern: library clone <file>
   effect: base→personal for customization
-  
+
 status:
   pattern: library status
   output: sync state, conflicts, file counts
-  
+
 files:
   pattern: library files <pattern>
   glob: supports **/*.md, ./docs/**/*.md
 ```
 
 ### MCP Operations
+
 ```yaml
 browse:
   pattern: mcp browse
   output: available servers from registry
-  
+
 install:
   pattern: mcp install <name>
   effect: adds to registry, available for agents
-  
+
 paste:
   pattern: mcp paste
   input: JSON from clipboard/stdin
   formats: [mcpServers_wrapper, direct_entry]
   auto_fix: wraps direct entries
-  
+
 configure:
   pattern: mcp configure <name>
   editor: $EDITOR or system default
 ```
 
 ### Workflow Patterns
+
 ```yaml
 new_agent:
   1. ai-config (launch TUI)
@@ -187,13 +197,13 @@ new_agent:
   5. select: space (toggle resources/servers)
   6. save: ctrl+s
   7. auto_export: to Q CLI
-  
+
 library_update:
   1. ai-config library sync
   2. review: conflicts if any
   3. resolve: interactive choice
   4. backup: automatic
-  
+
 mcp_add:
   1. copy: JSON from fastmcp.me
   2. ai-config mcp paste
@@ -206,6 +216,7 @@ mcp_add:
 ## CONFIGURATION
 
 ### Agent Configuration Schema
+
 ```json
 {
   "$schema": "https://raw.githubusercontent.com/aws/amazon-q-developer-cli/refs/heads/main/schemas/agent-v1.json",
@@ -228,29 +239,29 @@ mcp_add:
 ```
 
 ### Library Organization
+
 ```yaml
 base_library:
-  roles/:
-    product-owner/
-      - product-owner.md (main role definition)
-      - additional-config.md (extensions)
+  roles/: product-owner/
+    - product-owner.md (main role definition)
+    - additional-config.md (extensions)
     software-architect/
-      - software-architect.md
-      - patterns.md
+    - software-architect.md
+    - patterns.md
     software-engineer/
-      - software-engineer.md
-      - best-practices.md
-  
+    - software-engineer.md
+    - best-practices.md
+
   domains/:
     - aws-best-practices.md
     - security.md
-  
+
   tools/:
     - git.md
-  
+
   workflows/:
     - code-review.md
-  
+
   common/:
     - policies.md (organizational standards)
     - aws-security-best-practices.md
@@ -262,6 +273,7 @@ personal_library:
 ```
 
 ### MCP Server Configuration
+
 ```yaml
 format_1_mcpServers_wrapper:
   mcpServers:
@@ -282,6 +294,7 @@ integration:
 ```
 
 ### File Pattern Syntax
+
 ```yaml
 glob_patterns:
   recursive: "**/*.md"
@@ -296,6 +309,7 @@ usage:
 ```
 
 ### Template System
+
 ```yaml
 location: library/base/templates/
 naming: {role-name}-{tool}.md
@@ -317,6 +331,7 @@ usage:
 ## INTERFACES
 
 ### TUI Mode
+
 ```yaml
 launch: ai-config (no args)
 navigation:
@@ -347,6 +362,7 @@ mcp_management:
 ```
 
 ### CLI Mode
+
 ```yaml
 invocation: ai-config <command> [args]
 output_formats: [text, json]
@@ -360,6 +376,7 @@ characteristics:
 ```
 
 ### Interaction Modes
+
 ```yaml
 visual:
   interface: TUI
@@ -381,6 +398,7 @@ hybrid:
 ## TROUBLESHOOTING_PATTERNS
 
 ### Common Issues
+
 ```yaml
 agent_not_in_qcli:
   check: ls ~/.aws/amazonq/cli-agents/
@@ -408,6 +426,7 @@ file_patterns_no_match:
 ```
 
 ### Recovery Procedures
+
 ```yaml
 corrupted_config:
   backup: cp -r ~/.config/ai-configurator ~/.config/ai-configurator.backup
@@ -429,6 +448,7 @@ broken_agent:
 ## METADATA
 
 ### Version History
+
 ```yaml
 0.1.0:
   architecture: global contexts + profiles
@@ -451,6 +471,7 @@ broken_agent:
 ```
 
 ### Migration Context
+
 ```yaml
 v0.1_to_v0.2:
   reason: Q CLI deprecated global contexts
@@ -464,6 +485,7 @@ v0.2_to_v0.2.7:
 ```
 
 ### System Capabilities
+
 ```yaml
 supported_tools:
   current: [q-cli]
@@ -491,6 +513,7 @@ mcp_features:
 ```
 
 ### Technical Stack
+
 ```yaml
 language: python 3.9+
 dependencies:
@@ -506,6 +529,7 @@ packaging:
 ```
 
 ### Key Constraints
+
 ```yaml
 context_limits:
   - Q CLI: ~100 files recommended
@@ -526,6 +550,7 @@ tool_integration:
 ## SEMANTIC_RELATIONSHIPS
 
 ### Concept Map
+
 ```
 Library (knowledge base)
   ├─→ Base (shared, read-only)
@@ -554,6 +579,7 @@ Tool (AI platform)
 ```
 
 ### Operation Dependencies
+
 ```
 agent.create → library.sync (ensure latest)
 agent.edit → tui.launch (visual mode)
@@ -563,6 +589,7 @@ mcp.paste → json.validate → format.fix
 ```
 
 ### Data Flow
+
 ```
 Source (GitHub/local)
   ↓ sync
@@ -580,25 +607,23 @@ Tool (Q CLI/Claude/ChatGPT)
 ## IMPLEMENTATION_NOTES
 
 ### Critical Paths
+
 ```yaml
-agent_creation:
-  1. ensure library synced
+agent_creation: 1. ensure library synced
   2. create agent JSON
   3. add resource references (file://)
   4. configure MCP servers
   5. export to tool directory
   6. validate tool can load
 
-library_management:
-  1. detect changes (base vs personal)
+library_management: 1. detect changes (base vs personal)
   2. identify conflicts (both modified)
   3. present options (keep/accept/merge)
   4. backup before changes
   5. apply resolution
   6. update agent references if needed
 
-mcp_integration:
-  1. receive JSON (paste/file)
+mcp_integration: 1. receive JSON (paste/file)
   2. detect format (wrapper vs direct)
   3. normalize to mcpServers format
   4. validate schema
@@ -607,6 +632,7 @@ mcp_integration:
 ```
 
 ### Edge Cases
+
 ```yaml
 empty_library:
   behavior: create default structure
@@ -632,6 +658,7 @@ tool_not_installed:
 ```
 
 ### Performance Considerations
+
 ```yaml
 library_size:
   recommended: ~100 files
@@ -653,6 +680,7 @@ file_watching:
 ## QUICK_REFERENCE
 
 ### Essential Commands
+
 ```
 ai-config                          # launch TUI
 ai-config agent create <name>      # new agent
@@ -662,6 +690,7 @@ ai-config mcp paste                # add MCP server
 ```
 
 ### File Locations
+
 ```
 ~/.config/ai-configurator/library/base/     # shared knowledge
 ~/.config/ai-configurator/library/personal/ # customizations
@@ -670,6 +699,7 @@ ai-config mcp paste                # add MCP server
 ```
 
 ### Key Concepts
+
 ```
 tool-agnostic: knowledge works everywhere
 file-reference: agents point to files, not embed
