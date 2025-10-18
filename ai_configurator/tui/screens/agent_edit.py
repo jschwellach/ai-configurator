@@ -499,9 +499,17 @@ class AgentEditScreen(BaseScreen):
             new_resources = []
             for path in self.selected_files:
                 if path in self.available_files:
-                    # Determine source from path (base/ or personal/)
+                    # Determine source from path structure
                     from ai_configurator.models import LibrarySource
-                    source = LibrarySource.BASE if path.startswith("base/") else LibrarySource.PERSONAL
+                    
+                    # Check which folder the file is actually in
+                    if path.startswith("base/"):
+                        source = LibrarySource.BASE
+                    elif path.startswith("personal/"):
+                        source = LibrarySource.PERSONAL
+                    else:
+                        # For custom folders, treat as personal (non-base)
+                        source = LibrarySource.PERSONAL
                     
                     new_resources.append(ResourcePath(
                         path=path,

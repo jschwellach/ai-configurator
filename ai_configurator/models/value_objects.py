@@ -63,20 +63,14 @@ class ResourcePath(BaseModel):
         if Path(self.path).is_absolute():
             return f"file://{self.path}"
         
-        # For relative paths, resolve based on source
-        if self.source == LibrarySource.BASE:
-            from ai_configurator.tui.config import get_library_paths
-            base_path, _ = get_library_paths()
-            full_path = base_path / self.path
-            return f"file://{full_path}"
-        elif self.source == LibrarySource.PERSONAL:
-            from ai_configurator.tui.config import get_library_paths
-            _, personal_path = get_library_paths()
-            full_path = personal_path / self.path
-            return f"file://{full_path}"
-        else:
-            # Fallback to relative path
-            return f"file://{self.path}"
+        # For relative paths, resolve from library root
+        from ai_configurator.tui.config import get_library_paths
+        base_path, personal_path = get_library_paths()
+        library_root = personal_path.parent  # Get library root
+        
+        # Path is relative to library root
+        full_path = library_root / self.path
+        return f"file://{full_path}"
     
     class Config:
         frozen = True
