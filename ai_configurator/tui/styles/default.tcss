@@ -48,6 +48,15 @@ Button:focus {
     padding: 1;
 }
 
+#library-container {
+    height: 100%;
+}
+
+.file-list {
+    height: 1fr;
+    min-height: 10;
+}
+
 DataTable {
     height: 100%;
 }
