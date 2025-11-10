@@ -27,6 +27,7 @@
    - Creating your first agent
    - Setting up MCP servers (optional)
    - Exporting to Q CLI for immediate use
+   - Exporting as a shareable package for team collaboration
 
 3. **Check System Status**
    ```bash
@@ -127,16 +128,22 @@ ai-config create-agent --name my-agent --tool q-cli --description "My custom age
 
 ```bash
 # List all agents
-ai-config list-agents
+ai-config agent list
 
 # View agent details
-ai-config show-agent my-agent
+ai-config agent show my-agent
 
 # Interactive management (add/remove resources, MCP servers)
 ai-config manage-agent my-agent
 
 # Export agent for use with Q CLI
-ai-config export-agent my-agent --save
+ai-config agent export my-agent
+
+# Export agent as a shareable package
+ai-config agent export-package my-agent /path/to/export/directory
+
+# Import agent from a package
+ai-config agent import-package /path/to/package/directory --name new-agent-name
 ```
 
 ### Agent Configuration
@@ -326,9 +333,14 @@ Templates follow the pattern: `{name}-{tool}.md`
 ### Batch Operations
 
 ```bash
-# Export all agents
-for agent in $(ai-config list-agents --names-only); do
-  ai-config export-agent $agent --save
+# Export all agents to Q CLI
+for agent in $(ai-config agent list | grep -E '^[a-zA-Z]' | awk '{print $1}'); do
+  ai-config agent export $agent
+done
+
+# Export all agents as packages
+for agent in $(ai-config agent list | grep -E '^[a-zA-Z]' | awk '{print $1}'); do
+  ai-config agent export-package $agent /path/to/export/directory
 done
 
 # Add same files to multiple agents
@@ -363,6 +375,53 @@ ai-config files watch-files project-agent --enable
 - **Sync Regularly**: Run `ai-config library sync` to get updates
 - **Review Conflicts**: Don't blindly accept all changes
 - **Backup Important**: Personal customizations are backed up automatically
+
+### Agent Sharing and Team Collaboration
+
+AI Configurator now supports sharing agent configurations with your team through import/export packages. This feature allows you to:
+
+- Share complete agent configurations including all referenced knowledge files
+- Distribute MCP server configurations
+- Maintain consistent agent setups across team members
+- Version control agent configurations separately from the main library
+
+#### Exporting Agents for Sharing
+
+To export an agent as a shareable package:
+
+```bash
+ai-config agent export-package my-agent /path/to/export/directory
+```
+
+This creates a package directory containing:
+- `agent.json`: The complete agent configuration
+- `manifest.json`: Package metadata including version and file references
+- `library/`: All referenced knowledge files organized by their library structure
+- `mcp/`: MCP server configurations (if any)
+
+#### Importing Agents from Packages
+
+To import an agent from a package:
+
+```bash
+# Import with original name
+ai-config agent import-package /path/to/package/directory
+
+# Import with a new name
+ai-config agent import-package /path/to/package/directory --name new-agent-name
+```
+
+When importing, the system will:
+1. Install referenced library files to your personal library
+2. Create the agent configuration with updated file references
+3. Configure any MCP servers included in the package
+
+#### Best Practices for Team Collaboration
+
+1. **Version Control**: Store exported packages in version control systems
+2. **Documentation**: Include README files with package descriptions and usage instructions
+3. **Testing**: Test imported agents to ensure they work as expected in different environments
+4. **Updates**: Share updated packages when making significant changes to agent configurations
 
 ### Agent Organization
 - **Descriptive Names**: Use clear, descriptive agent names

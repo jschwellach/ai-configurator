@@ -7,6 +7,7 @@ from textual.binding import Binding
 
 from ai_configurator.tui.screens.base import BaseScreen
 from ai_configurator.services.agent_service import AgentService
+from ai_configurator.services.import_export_service import ImportExportService
 from ai_configurator.models import ToolType
 
 # Set up logging
@@ -23,6 +24,8 @@ class AgentManagerScreen(BaseScreen):
         Binding("d", "delete_agent", "Delete"),
         Binding("i", "import_qcli", "Import Q CLI"),
         Binding("x", "export_agent", "Export"),
+        Binding("p", "export_package", "Export Package"),
+        Binding("I", "import_package", "Import Package"),
         Binding("r", "refresh", "Refresh"),
     ]
     
@@ -37,7 +40,7 @@ class AgentManagerScreen(BaseScreen):
         """Build screen layout."""
         yield Header()
         yield Container(
-            Static("[bold cyan]Agent Management[/bold cyan]\n[dim]n=New e=Edit m=Rename d=Delete i=Import x=Export r=Refresh[/dim]", id="title"),
+            Static("[bold cyan]Agent Management[/bold cyan]\n[dim]n=New e=Edit m=Rename d=Delete i=Import x=Export p=Export Package I=Import Package r=Refresh[/dim]", id="title"),
             DataTable(id="agent_table", classes="agent-list"),
             id="agent-container"
         )
@@ -206,6 +209,134 @@ class AgentManagerScreen(BaseScreen):
         except Exception as e:
             logger.error(f"Error exporting agent: {e}", exc_info=True)
             self.show_notification(f"Error: {e}", "error")
+    
+    def action_export_package(self) -> None:
+        """Export selected agent as a shareable package."""
+        if not self.selected_agent or not self.selected_tool:
+            self.show_notification("Please select an agent first", "warning")
+            return
+        
+        # Prompt user for export directory
+        from textual.widgets import Input
+        from textual.containers import Vertical
+        from textual.screen import ModalScreen
+        
+        class ExportPathScreen(ModalScreen):
+            def __init__(self, callback):
+                super().__init__()
+                self.callback = callback
+            
+            def compose(self) -> ComposeResult:
+                yield Vertical(
+                    Static("Enter export directory path:"),
+                    Input(placeholder="/path/to/export/directory", id="export_path"),
+                    Button("Export", variant="primary", id="export_btn"),
+                    Button("Cancel", variant="error", id="cancel_btn"),
+                )
+            
+            def on_button_pressed(self, event: Button.Pressed) -> None:
+                if event.button.id == "export_btn":
+                    path_input = self.query_one("#export_path", Input)
+                    self.callback(path_input.value)
+                    self.app.pop_screen()
+                elif event.button.id == "cancel_btn":
+                    self.app.pop_screen()
+        
+        def export_callback(path: str) -> None:
+            if not path:
+                self.show_notification("Export path is required", "warning")
+                return
+            
+            try:
+                from pathlib import Path
+                from ai_configurator.services.import_export_service import ImportExportService
+                
+                export_path = Path(path)
+                if not export_path.exists():
+                    self.show_notification(f"Export path does not exist: {path}", "error")
+                    return
+                
+                import_export_service = ImportExportService(self.agent_service)
+                result = import_export_service.export_agent(
+                    self.selected_agent, self.selected_tool, export_path
+                )
+                
+                if result:
+                    self.show_notification(
+                        f"Exported package: {self.selected_agent}\nLocation: {export_path / f'{self.selected_agent}_package'}", 
+                        "information"
+                    )
+                else:
+                    self.show_notification("Package export failed", "error")
+            except Exception as e:
+                logger.error(f"Error exporting agent package: {e}", exc_info=True)
+                self.show_notification(f"Error: {e}", "error")
+        
+        self.app.push_screen(ExportPathScreen(export_callback))
+    
+    def action_import_package(self) -> None:
+        """Import agent from a package."""
+        # Prompt user for package directory
+        from textual.widgets import Input
+        from textual.containers import Vertical
+        from textual.screen import ModalScreen
+        
+        class ImportPathScreen(ModalScreen):
+            def __init__(self, callback):
+                super().__init__()
+                self.callback = callback
+            
+            def compose(self) -> ComposeResult:
+                yield Vertical(
+                    Static("Enter package directory path:"),
+                    Input(placeholder="/path/to/package/directory", id="import_path"),
+                    Input(placeholder="New agent name (optional)", id="agent_name"),
+                    Button("Import", variant="primary", id="import_btn"),
+                    Button("Cancel", variant="error", id="cancel_btn"),
+                )
+            
+            def on_button_pressed(self, event: Button.Pressed) -> None:
+                if event.button.id == "import_btn":
+                    path_input = self.query_one("#import_path", Input)
+                    name_input = self.query_one("#agent_name", Input)
+                    self.callback(path_input.value, name_input.value)
+                    self.app.pop_screen()
+                elif event.button.id == "cancel_btn":
+                    self.app.pop_screen()
+        
+        def import_callback(path: str, new_name: str) -> None:
+            if not path:
+                self.show_notification("Package path is required", "warning")
+                return
+            
+            try:
+                from pathlib import Path
+                from ai_configurator.services.import_export_service import ImportExportService
+                
+                package_path = Path(path)
+                if not package_path.exists():
+                    self.show_notification(f"Package path does not exist: {path}", "error")
+                    return
+                
+                import_export_service = ImportExportService(self.agent_service)
+                result = import_export_service.import_agent(
+                    package_path, new_name if new_name else None
+                )
+                
+                if result:
+                    agent_name, tool_type = result
+                    self.show_notification(
+                        f"Imported agent: {agent_name}\nTool type: {tool_type.value}", 
+                        "information"
+                    )
+                    self.refresh_data()  # Refresh the agent list
+                else:
+                    self.show_notification("Package import failed", "error")
+            except Exception as e:
+                logger.error(f"Error importing agent package: {e}", exc_info=True)
+                self.show_notification(f"Error: {e}", "error")
+        
+        self.app.push_screen(ImportPathScreen(import_callback))
     
     def action_import_qcli(self) -> None:
         """Import agents from Q CLI."""

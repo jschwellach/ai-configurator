@@ -6,6 +6,7 @@ from rich.table import Table
 
 from ai_configurator.services.agent_service import AgentService
 from ai_configurator.services.wizard_service import WizardService
+from ai_configurator.models.value_objects import ToolType
 
 console = Console()
 
@@ -110,6 +111,87 @@ def delete(name: str, force: bool):
 def export(name: str):
     """Export agent to target tool."""
     service = get_agent_service()
-    result = service.export_agent(name)
-    console.print(f"[green]✓[/green] Exported agent: {name}")
-    console.print(f"Location: {result}")
+    
+    # Find the agent (we need to know its tool type)
+    agents = service.list_agents()
+    agent = None
+    for a in agents:
+        if a.name == name:
+            agent = a
+            break
+    
+    if not agent:
+        console.print(f"[red]Agent '{name}' not found.[/red]")
+        raise click.Abort()
+    
+    if agent.tool_type == ToolType.Q_CLI:
+        result = service.export_to_q_cli(agent)
+        if result:
+            console.print(f"[green]✓[/green] Exported agent: {name}")
+            console.print(f"Location: ~/.aws/amazonq/cli-agents/{name}.json")
+        else:
+            console.print(f"[red]✗[/red] Failed to export agent: {name}")
+    else:
+        console.print(f"[yellow]Export not implemented for tool type: {agent.tool_type.value}[/yellow]")
+
+
+@agent.command()
+@click.argument('name')
+@click.argument('output_path', type=click.Path(exists=True, file_okay=False, dir_okay=True))
+def export_package(name: str, output_path: str):
+    """Export agent as a shareable package.
+    
+    NAME: Name of the agent to export
+    OUTPUT_PATH: Directory where the package should be created
+    """
+    from ai_configurator.services.import_export_service import ImportExportService
+    
+    service = get_agent_service()
+    import_export_service = ImportExportService(service)
+    
+    # Find the agent (we need to know its tool type)
+    agents = service.list_agents()
+    agent = None
+    tool_type = None
+    for a in agents:
+        if a.name == name:
+            agent = a
+            tool_type = a.tool_type
+            break
+    
+    if not agent:
+        console.print(f"[red]Agent '{name}' not found.[/red]")
+        raise click.Abort()
+    
+    output_path_obj = Path(output_path)
+    result = import_export_service.export_agent(name, tool_type, output_path_obj)
+    
+    if result:
+        console.print(f"[green]✓[/green] Exported agent package: {name}")
+        console.print(f"Location: {output_path_obj / f'{name}_package'}")
+    else:
+        console.print(f"[red]✗[/red] Failed to export agent package: {name}")
+
+
+@agent.command()
+@click.argument('package_path', type=click.Path(exists=True, file_okay=False, dir_okay=True))
+@click.option('--name', help='New name for the imported agent')
+def import_package(package_path: str, name: str):
+    """Import agent from a package.
+    
+    PACKAGE_PATH: Path to the agent package directory
+    """
+    from ai_configurator.services.import_export_service import ImportExportService
+    
+    service = get_agent_service()
+    import_export_service = ImportExportService(service)
+    
+    package_path_obj = Path(package_path)
+    result = import_export_service.import_agent(package_path_obj, name)
+    
+    if result:
+        agent_name, tool_type = result
+        console.print(f"[green]✓[/green] Imported agent: {agent_name}")
+        console.print(f"Tool type: {tool_type.value}")
+    else:
+        console.print(f"[red]✗[/red] Failed to import agent from package")
