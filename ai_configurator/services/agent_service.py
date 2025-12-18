@@ -8,6 +8,8 @@ from pathlib import Path
 from typing import Dict, List, Optional
 
 from ..models import Agent, AgentConfig, ToolType, HealthStatus
+from ..models.export_targets import AIToolType
+from .multi_export_service import MultiExportService
 
 
 class AgentService:
@@ -16,6 +18,7 @@ class AgentService:
     def __init__(self, agents_dir: Path):
         self.agents_dir = agents_dir
         self.agents_dir.mkdir(parents=True, exist_ok=True)
+        self.multi_export_service = MultiExportService()
     
     def create_agent(self, name: str, tool_type: ToolType, description: str = "") -> Optional[Agent]:
         """Create a new agent."""
@@ -48,6 +51,30 @@ class AgentService:
             return agent
         except Exception:
             return None
+    
+    def export_agent(self, agent: Agent, target_type: Optional[AIToolType] = None) -> tuple[bool, Optional[str]]:
+        """Export agent using multi-export service."""
+        return self.multi_export_service.export_agent(agent, target_type)
+    
+    def agent_exists(self, name: str, tool_type: ToolType) -> bool:
+        """Check if agent exists."""
+        return self._get_agent_file(name, tool_type).exists()
+    
+    def _save_agent(self, agent: Agent) -> bool:
+        """Save agent to file."""
+        try:
+            agent_file = self._get_agent_file(agent.name, agent.tool_type)
+            agent_file.parent.mkdir(parents=True, exist_ok=True)
+            
+            data = agent.config.dict()
+            agent_file.write_text(json.dumps(data, indent=2, default=str))
+            return True
+        except Exception:
+            return False
+    
+    def _get_agent_file(self, name: str, tool_type: ToolType) -> Path:
+        """Get agent file path."""
+        return self.agents_dir / tool_type.value / f"{name}.json"
     
     def update_agent(self, agent: Agent) -> bool:
         """Update an existing agent."""

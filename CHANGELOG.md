@@ -2,6 +2,31 @@
 
 All notable changes to AI Agent Manager will be documented in this file.
 
+## [0.4.0] - 2025-12-18
+
+### 🚀 Multi-AI Tool Export Enhancement
+
+Replace deprecated qcli export with configurable multi-AI tool export system.
+
+#### Added
+- **Multi-AI Tool Support**: Configurable export to kiro-cli and future AI tools (claude-code)
+- **Export Target Management**: Default export target with per-export override capability
+- **CLI Commands**: New export management commands (`export agent`, `export targets`, `export set-default`)
+- **Pluggable Architecture**: Strategy pattern for extensible AI tool support
+- **Migration Framework**: Support for transitioning from qcli to kiro-cli
+
+#### Changed
+- **Export System**: Replaced single qcli export with multi-tool export service
+- **Agent Service**: Integrated multi-export functionality
+- **CLI Interface**: Enhanced with export target selection options
+
+#### Technical
+- Added `AIToolType` enum for supported AI tools
+- Added `ExportTarget` model with configuration management
+- Added `MultiExportService` with pluggable export strategies
+- Added `KiroCliExportStrategy` for kiro-cli export format
+- Updated agent service to use new export system
+
 ## [0.2.0] - 2025-10-08
 
 ### 🎉 Q CLI Agent Import Feature

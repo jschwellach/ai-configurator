@@ -5,6 +5,7 @@ from click_default_group import DefaultGroup
 from ai_configurator.cli.agent_commands import agent
 from ai_configurator.cli.library_commands import library
 from ai_configurator.cli.mcp_commands import mcp
+from ai_configurator.cli.export_commands import export
 from ai_configurator.cli.system_commands import init, status, health, logs, stats, tui
 
 
@@ -23,6 +24,7 @@ def cli():
 cli.add_command(agent)
 cli.add_command(library)
 cli.add_command(mcp)
+cli.add_command(export)
 
 # Register system commands
 cli.add_command(init)

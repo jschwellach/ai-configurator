@@ -11,6 +11,7 @@ from .file_models import FilePattern, LocalResource, FileWatcher, FileWatchConfi
 from .registry_models import MCPServerRegistry, MCPServerMetadata, InstallationManager, InstallationStatus, InstallationResult
 from .wizard_models import Wizard, WizardStep, Template, TemplateLibrary, WizardResult
 from .value_objects import ResourcePath, ToolType, LibrarySource, ConflictType, Resolution, SyncStatus, HealthStatus
+from .export_targets import AIToolType, ExportTarget, ExportTargetRegistry, export_target_registry
 
 __all__ = [
     # Core entities
@@ -61,4 +62,9 @@ __all__ = [
     "Resolution",
     "SyncStatus",
     "HealthStatus",
+    # Export targets
+    "AIToolType",
+    "ExportTarget",
+    "ExportTargetRegistry",
+    "export_target_registry",
 ]

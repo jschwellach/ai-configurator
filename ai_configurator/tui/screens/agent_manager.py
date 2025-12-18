@@ -191,7 +191,7 @@ class AgentManagerScreen(BaseScreen):
             self.show_notification(f"Error: {e}", "error")
     
     def action_export_agent(self) -> None:
-        """Export selected agent to Q CLI."""
+        """Export selected agent using multi-export service."""
         if not self.selected_agent or not self.selected_tool:
             self.show_notification("Please select an agent first", "warning")
             return
@@ -202,10 +202,12 @@ class AgentManagerScreen(BaseScreen):
                 self.show_notification(f"Agent '{self.selected_agent}' not found", "error")
                 return
             
-            if self.agent_service.export_to_q_cli(agent):
-                self.show_notification(f"Exported to Q CLI: {self.selected_agent}", "information")
+            # Use the new multi-export service (defaults to kiro-cli)
+            success, error_msg = self.agent_service.export_agent(agent)
+            if success:
+                self.show_notification(f"Exported to Kiro CLI: {self.selected_agent}", "information")
             else:
-                self.show_notification("Export failed (only Q CLI agents supported)", "warning")
+                self.show_notification(f"Export failed: {error_msg}", "error")
         except Exception as e:
             logger.error(f"Error exporting agent: {e}", exc_info=True)
             self.show_notification(f"Error: {e}", "error")
